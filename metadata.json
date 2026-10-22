@@ -1,0 +1,6 @@
+{
+  "name": "Trợ Lý Chủ Nhiệm",
+  "description": "Ứng dụng web quản lý lớp học và trợ lý giáo viên chủ nhiệm: quản lý học sinh, điểm danh, bảng điểm, thi đua nề nếp và bảng tin",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
