@@ -43,7 +43,7 @@ export const ChangePasswordModal: React.FC = () => {
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-rose-200">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-rose-500" />
+            <KeyRound className="h-5 w-5 text-rose-800" />
             <h3 className="text-base font-bold text-slate-900">
               {userRole === 'teacher' ? 'Đổi mật khẩu Giáo viên' : 'Đổi mật khẩu Học sinh'}
             </h3>
@@ -101,7 +101,7 @@ export const ChangePasswordModal: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-xl bg-rose-500 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 disabled:opacity-50"
+              className="rounded-xl bg-rose-500 px-5 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 disabled:opacity-50"
             >
               {isSubmitting ? 'Đang cập nhật...' : 'Xác nhận đổi mật khẩu'}
             </button>

@@ -224,7 +224,7 @@ export const BulletinSeating: React.FC = () => {
             onClick={() => setSubTab('bulletin')}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all ${
               subTab === 'bulletin'
-                ? 'bg-rose-500 text-white shadow-xs'
+                ? 'bg-rose-500 text-slate-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -235,7 +235,7 @@ export const BulletinSeating: React.FC = () => {
             onClick={() => setSubTab('seating')}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all ${
               subTab === 'seating'
-                ? 'bg-rose-500 text-white shadow-xs'
+                ? 'bg-rose-500 text-slate-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -246,7 +246,7 @@ export const BulletinSeating: React.FC = () => {
             onClick={() => setSubTab('honor')}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all ${
               subTab === 'honor'
-                ? 'bg-rose-500 text-white shadow-xs'
+                ? 'bg-rose-500 text-slate-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -266,7 +266,7 @@ export const BulletinSeating: React.FC = () => {
               });
               setIsPostModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
           >
             <Plus className="h-4 w-4" />
             <span>Đăng thông tin mới</span>
@@ -295,7 +295,7 @@ export const BulletinSeating: React.FC = () => {
             </button>
             <button
               onClick={handleSaveSeatingPlan}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
             >
               <Save className="h-4 w-4" />
               <span>Lưu sơ đồ</span>
@@ -309,7 +309,7 @@ export const BulletinSeating: React.FC = () => {
         <div className="space-y-4">
           {posts.length === 0 ? (
             <div className="rounded-2xl border border-rose-200 bg-white p-12 text-center shadow-xs">
-              <Megaphone className="mx-auto h-12 w-12 text-rose-300" />
+              <Megaphone className="mx-auto h-12 w-12 text-rose-800" />
               <h3 className="mt-3 text-base font-bold text-slate-800">
                 Chưa có bài đăng nào trên bảng tin
               </h3>
@@ -369,7 +369,7 @@ export const BulletinSeating: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleDeletePost(post.id)}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-800"
                             title="Xóa bài viết"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -459,7 +459,7 @@ export const BulletinSeating: React.FC = () => {
                 </p>
               </div>
               <div className="text-xs font-semibold text-slate-600">
-                Đã xếp: <span className="text-rose-600 font-bold">{seatedStudentIds.size}</span> / {students.length} học sinh
+                Đã xếp: <span className="text-rose-800 font-bold">{seatedStudentIds.size}</span> / {students.length} học sinh
               </div>
             </div>
 
@@ -532,7 +532,7 @@ export const BulletinSeating: React.FC = () => {
                           >
                             {student1 ? (
                               <>
-                                <span className="text-[10px] text-rose-600 font-semibold">{student1.code}</span>
+                                <span className="text-[10px] text-rose-800 font-semibold">{student1.code}</span>
                                 <span className="truncate text-[11px]">{student1.fullName}</span>
                               </>
                             ) : (
@@ -558,7 +558,7 @@ export const BulletinSeating: React.FC = () => {
                           >
                             {student2 ? (
                               <>
-                                <span className="text-[10px] text-rose-600 font-semibold">{student2.code}</span>
+                                <span className="text-[10px] text-rose-800 font-semibold">{student2.code}</span>
                                 <span className="truncate text-[11px]">{student2.fullName}</span>
                               </>
                             ) : (
@@ -609,7 +609,7 @@ export const BulletinSeating: React.FC = () => {
                   className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold shadow-xs transition-colors ${
                     honorBoard?.isPublished
                       ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      : 'bg-rose-500 text-white hover:bg-rose-600'
+                      : 'bg-rose-500 text-slate-800 hover:bg-rose-600'
                   }`}
                 >
                   <Trophy className="h-4 w-4" />
@@ -669,7 +669,7 @@ export const BulletinSeating: React.FC = () => {
                         {stu.studentName}
                       </div>
                       <div className="text-[11px] text-slate-500">Mã: {stu.studentCode}</div>
-                      <div className="mt-2 inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-extrabold text-rose-600 shadow-2xs">
+                      <div className="mt-2 inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-extrabold text-rose-800 shadow-2xs">
                         ĐTB: {stu.gpa.toFixed(2)}
                       </div>
                     </div>
@@ -713,7 +713,7 @@ export const BulletinSeating: React.FC = () => {
                   />
                   <button
                     type="submit"
-                    className="rounded-xl bg-rose-500 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 shrink-0"
+                    className="rounded-xl bg-rose-500 px-3 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 shrink-0"
                   >
                     Thêm
                   </button>
@@ -795,7 +795,7 @@ export const BulletinSeating: React.FC = () => {
                       type="checkbox"
                       checked={editingPost?.isPinned || false}
                       onChange={e => setEditingPost({ ...editingPost, isPinned: e.target.checked })}
-                      className="rounded text-rose-500 focus:ring-rose-400"
+                      className="rounded text-rose-800 focus:ring-rose-400"
                     />
                     <span>Ghim đầu trang</span>
                   </label>
@@ -804,7 +804,7 @@ export const BulletinSeating: React.FC = () => {
                       type="checkbox"
                       checked={editingPost?.isPublished !== false}
                       onChange={e => setEditingPost({ ...editingPost, isPublished: e.target.checked })}
-                      className="rounded text-rose-500 focus:ring-rose-400"
+                      className="rounded text-rose-800 focus:ring-rose-400"
                     />
                     <span>Công bố ngay</span>
                   </label>
@@ -876,7 +876,7 @@ export const BulletinSeating: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600"
+                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600"
                 >
                   Lưu bài đăng
                 </button>
@@ -929,7 +929,7 @@ export const BulletinSeating: React.FC = () => {
                       onClick={() => handleAssignSeat(s.id)}
                       className={`flex w-full items-center justify-between rounded-lg p-2 text-left text-xs transition-colors ${
                         isCurrent
-                          ? 'bg-rose-500 font-bold text-white'
+                          ? 'bg-rose-500 font-bold text-slate-800'
                           : isSeatedElsewhere
                           ? 'opacity-40 cursor-not-allowed bg-slate-50 text-slate-400'
                           : 'hover:bg-slate-100 text-slate-800'

@@ -223,7 +223,7 @@ export const AttendanceView: React.FC = () => {
       {/* Zero students warning */}
       {activeStudents.length === 0 ? (
         <div className="rounded-2xl border border-rose-200 bg-white p-12 text-center shadow-xs">
-          <Users className="mx-auto h-12 w-12 text-rose-300" />
+          <Users className="mx-auto h-12 w-12 text-rose-800" />
           <h3 className="mt-3 text-base font-bold text-slate-800">
             Lớp học chưa có học sinh để điểm danh
           </h3>
@@ -297,7 +297,7 @@ export const AttendanceView: React.FC = () => {
                     onClick={() => handleSetStatus(student.id, 'unexcused')}
                     className={`flex flex-col items-center justify-center rounded-xl p-2 text-xs font-bold transition-all ${
                       currentStatus === 'unexcused'
-                        ? 'bg-rose-600 text-white shadow-xs'
+                        ? 'bg-rose-600 text-slate-800 shadow-xs'
                         : 'border border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100'
                     }`}
                   >

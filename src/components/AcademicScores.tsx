@@ -299,7 +299,7 @@ export const AcademicScores: React.FC = () => {
       {/* Top Banner matching Image 5 */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-rose-200 bg-white p-5 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-800">
             <BookOpen className="h-6 w-6" />
           </div>
           <div>
@@ -425,7 +425,7 @@ export const AcademicScores: React.FC = () => {
               className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 shadow-2xs hover:bg-rose-100 transition-colors"
               title="Xóa điểm tháng này (có sao lưu tự động)"
             >
-              <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+              <Trash2 className="h-3.5 w-3.5 text-rose-800" />
               <span>Xóa điểm tháng</span>
             </button>
 
@@ -439,7 +439,7 @@ export const AcademicScores: React.FC = () => {
 
             <button
               onClick={handleSaveAllScores}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
             >
               <Save className="h-3.5 w-3.5" />
               <span>Lưu bảng điểm</span>
@@ -474,7 +474,7 @@ export const AcademicScores: React.FC = () => {
                     </span>
                   </th>
                 ))}
-                <th className="py-3 px-4 text-center min-w-[90px] font-extrabold text-rose-600 bg-rose-50/50">
+                <th className="py-3 px-4 text-center min-w-[90px] font-extrabold text-rose-800 bg-rose-50/50">
                   ĐTB THÁNG
                 </th>
               </tr>
@@ -537,7 +537,7 @@ export const AcademicScores: React.FC = () => {
                       })}
 
                       {/* GPA Cell */}
-                      <td className="py-2.5 px-4 text-center font-extrabold text-rose-600 bg-rose-50/20">
+                      <td className="py-2.5 px-4 text-center font-extrabold text-rose-800 bg-rose-50/20">
                         {gpa !== null && gpa !== undefined ? gpa.toFixed(2) : '-'}
                       </td>
                     </tr>
@@ -595,7 +595,7 @@ export const AcademicScores: React.FC = () => {
                     onClick={() => {
                       setEditingSubjects(editingSubjects.filter((_, idx) => idx !== i));
                     }}
-                    className="p-1 text-slate-400 hover:text-rose-600"
+                    className="p-1 text-slate-400 hover:text-rose-800"
                     title="Xóa môn"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -615,7 +615,7 @@ export const AcademicScores: React.FC = () => {
                   };
                   setEditingSubjects([...editingSubjects, newSub]);
                 }}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-rose-300 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-rose-300 py-2.5 text-xs font-bold text-rose-800 hover:bg-rose-50"
               >
                 <Plus className="h-4 w-4" />
                 <span>Thêm môn học mới</span>
@@ -633,7 +633,7 @@ export const AcademicScores: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSaveSubjects}
-                className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600"
+                className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600"
               >
                 Lưu cấu hình môn
               </button>
@@ -696,7 +696,7 @@ export const AcademicScores: React.FC = () => {
                   <div className="flex items-center justify-between text-xs font-bold">
                     <span>Xem trước dữ liệu ({parsedRows.length} học sinh):</span>
                     {parseErrorsCount > 0 ? (
-                      <span className="text-rose-600">{parseErrorsCount} dòng có lỗi</span>
+                      <span className="text-rose-800">{parseErrorsCount} dòng có lỗi</span>
                     ) : (
                       <span className="text-emerald-600">Tất cả các dòng hợp lệ</span>
                     )}
@@ -722,7 +722,7 @@ export const AcademicScores: React.FC = () => {
                                   <CheckCircle2 className="h-3.5 w-3.5" /> Hợp lệ
                                 </span>
                               ) : (
-                                <span className="text-rose-600 font-semibold">
+                                <span className="text-rose-800 font-semibold">
                                   {row.errors.join(', ')}
                                 </span>
                               )}
@@ -748,7 +748,7 @@ export const AcademicScores: React.FC = () => {
                 type="button"
                 disabled={parsedRows.length === 0}
                 onClick={handleConfirmExcelScoreImport}
-                className="rounded-xl bg-rose-500 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 disabled:opacity-50"
+                className="rounded-xl bg-rose-500 px-5 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 disabled:opacity-50"
               >
                 Xác nhận lưu điểm
               </button>

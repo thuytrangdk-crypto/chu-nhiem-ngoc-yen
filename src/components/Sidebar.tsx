@@ -77,7 +77,7 @@ export const Sidebar: React.FC = () => {
                   className="h-10 w-10 rounded-xl object-cover ring-2 ring-rose-200"
                 />
               ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-400 to-rose-500 text-white shadow-xs">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-400 to-rose-500 text-slate-800 shadow-xs">
                   <GraduationCap className="h-6 w-6" />
                 </div>
               )}
@@ -108,7 +108,7 @@ export const Sidebar: React.FC = () => {
             </div>
             {/* Supabase status badge */}
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fdf2f4] px-2.5 py-1 text-[11px] font-medium text-slate-700">
-              <Cloud className="h-3.5 w-3.5 text-rose-500" />
+              <Cloud className="h-3.5 w-3.5 text-rose-800" />
               <span>
                 Supabase:{' '}
                 {supabaseStatus.isConnected
@@ -141,13 +141,13 @@ export const Sidebar: React.FC = () => {
                 onClick={() => handleNav(item.id)}
                 className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
                   isActive
-                    ? 'bg-rose-50 text-rose-600 shadow-xs'
+                    ? 'bg-rose-50 text-rose-800 shadow-xs'
                     : 'text-slate-600 hover:bg-[#fff5f6] hover:text-slate-900'
                 }`}
               >
                 <Icon
                   className={`h-5 w-5 shrink-0 ${
-                    isActive ? 'text-rose-500' : 'text-slate-400'
+                    isActive ? 'text-rose-800' : 'text-slate-400'
                   }`}
                 />
                 <span className="truncate">{item.label}</span>
@@ -167,7 +167,7 @@ export const Sidebar: React.FC = () => {
               openChangePassword();
               closeMobileMenu();
             }}
-            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+            className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-800"
           >
             <KeyRound className="h-4 w-4 text-slate-400" />
             <span>
@@ -177,7 +177,7 @@ export const Sidebar: React.FC = () => {
 
           <div className="flex items-center justify-between rounded-lg bg-white px-2.5 py-2 text-xs border border-[#ffe6ea]">
             <div className="flex items-center gap-2 truncate">
-              <Cloud className="h-4 w-4 text-rose-400" />
+              <Cloud className="h-4 w-4 text-rose-800" />
               <span className="truncate font-medium text-slate-600">
                 {supabaseStatus.isConnected ? 'Supabase Cloud' : 'Bộ nhớ máy chủ'}
               </span>
@@ -203,7 +203,7 @@ export const Sidebar: React.FC = () => {
             </div>
             <button
               onClick={logout}
-              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100/60"
+              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100/60"
               title="Đăng xuất khỏi hệ thống"
             >
               <LogOut className="h-3.5 w-3.5" />

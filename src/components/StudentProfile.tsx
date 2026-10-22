@@ -145,7 +145,7 @@ export const StudentProfile: React.FC = () => {
   const tPass = conductSettings?.thresholdPass ?? 130;
 
   let conductRank = 'Chưa đạt';
-  let conductRankColor = 'text-rose-600';
+  let conductRankColor = 'text-rose-800';
   if (remainingConductScore >= tGood) {
     conductRank = 'Tốt';
     conductRankColor = 'text-emerald-600';
@@ -260,7 +260,7 @@ export const StudentProfile: React.FC = () => {
           </button>
           <div>
             <h1 className="text-base font-extrabold text-slate-900 sm:text-lg">
-              Hồ sơ học sinh: <span className="text-rose-600 uppercase">{student.fullName}</span>
+              Hồ sơ học sinh: <span className="text-rose-800 uppercase">{student.fullName}</span>
             </h1>
             <div className="text-[11px] text-slate-500 font-mono">
               Mã định danh: {student.code} · Ngày sinh: {formatDateVN(student.birthDate)}
@@ -273,14 +273,14 @@ export const StudentProfile: React.FC = () => {
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
           >
-            <Printer className="h-4 w-4 text-rose-500" />
+            <Printer className="h-4 w-4 text-rose-800" />
             <span>Phiếu liên lạc</span>
           </button>
 
           {userRole === 'teacher' && (
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
             >
               <Edit2 className="h-4 w-4" />
               <span>Sửa thông tin</span>
@@ -295,7 +295,7 @@ export const StudentProfile: React.FC = () => {
           {student.fullName}
         </h2>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-600">
-          <span className={student.gender === 'Nữ' ? 'text-rose-600' : 'text-blue-600'}>
+          <span className={student.gender === 'Nữ' ? 'text-rose-800' : 'text-blue-600'}>
             {student.gender}
           </span>
           <span>·</span>
@@ -375,7 +375,7 @@ export const StudentProfile: React.FC = () => {
             onClick={() => setActiveProfileTab(tab.id)}
             className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
               activeProfileTab === tab.id
-                ? 'bg-rose-500 text-white shadow-xs'
+                ? 'bg-rose-500 text-slate-800 shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-rose-50 hover:text-slate-900 border border-slate-200'
             }`}
           >
@@ -391,7 +391,7 @@ export const StudentProfile: React.FC = () => {
           {userRole === 'teacher' ? (
             <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <Plus className="h-4 w-4 text-rose-500" />
+                <Plus className="h-4 w-4 text-rose-800" />
                 <h3 className="text-sm font-bold text-slate-900">Ghi nhận sự việc</h3>
               </div>
 
@@ -486,7 +486,7 @@ export const StudentProfile: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+                  className="w-full rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
                 >
                   Lưu ghi nhận sự việc
                 </button>
@@ -554,7 +554,7 @@ export const StudentProfile: React.FC = () => {
               {/* Point badge */}
               <div className="text-right">
                 <div className="text-xs text-slate-500 font-medium">
-                  Điểm trừ: <span className="text-rose-600 font-bold">-{totalSubPoints}đ</span> · Thưởng:{' '}
+                  Điểm trừ: <span className="text-rose-800 font-bold">-{totalSubPoints}đ</span> · Thưởng:{' '}
                   <span className="text-emerald-600 font-bold">+{totalAddPoints}đ</span>
                 </div>
               </div>
@@ -588,7 +588,7 @@ export const StudentProfile: React.FC = () => {
                           <div
                             className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
                               isViolation
-                                ? 'bg-rose-50 text-rose-600'
+                                ? 'bg-rose-50 text-rose-800'
                                 : 'bg-emerald-50 text-emerald-600'
                             }`}
                           >
@@ -621,7 +621,7 @@ export const StudentProfile: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span
                             className={`font-mono text-sm font-bold ${
-                              isViolation ? 'text-rose-600' : 'text-emerald-600'
+                              isViolation ? 'text-rose-800' : 'text-emerald-600'
                             }`}
                           >
                             {isViolation ? `-${inc.points}đ` : `+${inc.points}đ`}
@@ -630,7 +630,7 @@ export const StudentProfile: React.FC = () => {
                           {userRole === 'teacher' && (
                             <button
                               onClick={() => handleDeleteIncident(inc.id)}
-                              className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-800"
                               title="Xóa sự việc"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -777,7 +777,7 @@ export const StudentProfile: React.FC = () => {
                       .map(s => (
                         <div key={s.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
                           <span className="text-[11px] text-slate-500 font-bold">{s.yearMonth}</span>
-                          <div className="text-lg font-black text-rose-600 mt-1 tabular-nums">
+                          <div className="text-lg font-black text-rose-800 mt-1 tabular-nums">
                             {s.gpa?.toFixed(2)}
                           </div>
                           {/* Mini Progress Bar */}
@@ -801,7 +801,7 @@ export const StudentProfile: React.FC = () => {
                         {subjects.map(sub => (
                           <th key={sub.id} className="py-2.5 px-3">{sub.name}</th>
                         ))}
-                        <th className="py-2.5 px-3 font-bold text-rose-600">ĐTB</th>
+                        <th className="py-2.5 px-3 font-bold text-rose-800">ĐTB</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -818,7 +818,7 @@ export const StudentProfile: React.FC = () => {
                               </td>
                             );
                           })}
-                          <td className="py-2.5 px-3 font-bold text-rose-600 font-mono">
+                          <td className="py-2.5 px-3 font-bold text-rose-800 font-mono">
                             {rec.gpa !== null && rec.gpa !== undefined ? rec.gpa.toFixed(2) : '-'}
                           </td>
                         </tr>
@@ -863,7 +863,7 @@ export const StudentProfile: React.FC = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                <Lock className="h-3.5 w-3.5 text-rose-500" />
+                <Lock className="h-3.5 w-3.5 text-rose-800" />
                 <span>Ghi chú nội bộ (Chỉ GVCN xem)</span>
               </h3>
             </div>
@@ -874,7 +874,7 @@ export const StudentProfile: React.FC = () => {
                 </p>
                 <button
                   onClick={() => setIsEditModalOpen(true)}
-                  className="mt-3 text-xs font-bold text-rose-600 hover:text-rose-700"
+                  className="mt-3 text-xs font-bold text-rose-800 hover:text-rose-700"
                 >
                   + Cập nhật ghi chú nội bộ
                 </button>
@@ -1006,7 +1006,7 @@ export const StudentProfile: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600"
+                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600"
                 >
                   Lưu thay đổi
                 </button>
@@ -1035,7 +1035,7 @@ export const StudentProfile: React.FC = () => {
             <div className="mt-4 space-y-4">
               <p className="text-xs text-slate-600">
                 Học sinh: <strong>{student.fullName}</strong> (Mã: {student.code})<br />
-                Tên đăng nhập: <span className="font-mono font-bold text-rose-600">{student.username}</span>
+                Tên đăng nhập: <span className="font-mono font-bold text-rose-800">{student.username}</span>
               </p>
 
               <div>

@@ -96,7 +96,10 @@ class ApiService {
         headers,
       });
 
-      const data = await res.json().catch(() => ({}));
+      if (!(res.headers.get('content-type') || '').includes('application/json')) {
+        throw new Error('API chưa hoạt động. Kiểm tra bản triển khai và biến môi trường trên Vercel.');
+      }
+      const data = await res.json();
 
       if (!res.ok) {
         if (res.status === 401) {

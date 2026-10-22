@@ -5,6 +5,7 @@ import { GraduationCap, Key, User, ArrowRight, ShieldCheck, Info } from 'lucide-
 export const LoginView: React.FC = () => {
   const { login, config, showToast } = useApp();
   const [role, setRole] = useState<'teacher' | 'student'>('teacher');
+  const [loginError, setLoginError] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,9 +13,11 @@ export const LoginView: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setLoginError('');
       setIsSubmitting(true);
       await login(role, password, username);
     } catch (err: any) {
+      setLoginError(err.message || 'Không thể đăng nhập. Vui lòng thử lại.');
       showToast(err.message, 'error');
     } finally {
       setIsSubmitting(false);
@@ -30,14 +33,14 @@ export const LoginView: React.FC = () => {
       {/* Container Card */}
       <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-xl border border-[#ffe2e6]">
         {/* Top Header matching Image 1 */}
-        <div className="bg-gradient-to-r from-rose-500 via-rose-600 to-pink-600 px-6 py-8 text-center text-white">
+        <div className="bg-gradient-to-r from-rose-500 via-rose-600 to-pink-600 px-6 py-8 text-center text-slate-800">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-xs ring-4 ring-white/10">
-            <GraduationCap className="h-9 w-9 text-white" />
+            <GraduationCap className="h-9 w-9 text-slate-800" />
           </div>
           <h1 className="mt-4 text-2xl font-black tracking-tight uppercase">
             {role === 'teacher' ? 'GVCN' : 'HỌC SINH'}
           </h1>
-          <p className="mt-1 text-xs font-semibold text-rose-100">
+          <p className="mt-1 text-xs font-semibold text-rose-800">
             {schoolName} · Lớp {className}
           </p>
         </div>
@@ -54,7 +57,7 @@ export const LoginView: React.FC = () => {
               }}
               className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
                 role === 'teacher'
-                  ? 'bg-white text-rose-600 shadow-sm'
+                  ? 'bg-white text-rose-800 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -70,7 +73,7 @@ export const LoginView: React.FC = () => {
               }}
               className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
                 role === 'student'
-                  ? 'bg-white text-rose-600 shadow-sm'
+                  ? 'bg-white text-rose-800 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -98,7 +101,7 @@ export const LoginView: React.FC = () => {
                   <User className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
                 <p className="mt-1.5 text-[11px] text-slate-500 leading-normal">
-                  Cấu trúc: <strong>[Mã số][Ngày sinh ddmmyyyy]</strong>. Ví dụ: mã số 01, sinh ngày 02/10/2013 → <code className="text-rose-600 font-bold">0102102013</code>.
+                  Cấu trúc: <strong>[Mã số][Ngày sinh ddmmyyyy]</strong>. Ví dụ: mã số 01, sinh ngày 02/10/2013 → <code className="text-rose-800 font-bold">0102102013</code>.
                 </p>
               </div>
             )}
@@ -125,16 +128,21 @@ export const LoginView: React.FC = () => {
               </div>
               <p className="mt-1.5 text-[11px] text-slate-500">
                 {role === 'teacher'
-                  ? 'Dùng mật khẩu riêng đã thiết lập cho ứng dụng (mặc định: gvcn123).'
+                  ? 'Dùng mật khẩu giáo viên đã thiết lập cho ứng dụng.'
                   : 'Mật khẩu ban đầu là ngày sinh định dạng ddmmyyyy (ví dụ 02102013).'}
               </p>
             </div>
 
+            {loginError && (
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                {loginError}
+              </div>
+            )}
             {/* Submit button */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-500 py-3.5 text-xs font-bold text-white shadow-md hover:bg-rose-600 transition-colors disabled:opacity-50"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-500 py-3.5 text-xs font-bold text-slate-800 shadow-md hover:bg-rose-600 transition-colors disabled:opacity-50"
             >
               <span>{isSubmitting ? 'Đang xác thực...' : 'Đăng Nhập Vào Hệ Thống'}</span>
               <ArrowRight className="h-4 w-4" />

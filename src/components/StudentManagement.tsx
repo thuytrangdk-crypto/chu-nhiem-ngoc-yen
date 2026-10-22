@@ -195,7 +195,7 @@ export const StudentManagement: React.FC = () => {
               onClick={() => setViewMode('grid')}
               className={`rounded-lg p-1.5 transition-colors ${
                 viewMode === 'grid'
-                  ? 'bg-rose-50 text-rose-600'
+                  ? 'bg-rose-50 text-rose-800'
                   : 'text-slate-400 hover:text-slate-600'
               }`}
               title="Dạng thẻ"
@@ -206,7 +206,7 @@ export const StudentManagement: React.FC = () => {
               onClick={() => setViewMode('table')}
               className={`rounded-lg p-1.5 transition-colors ${
                 viewMode === 'table'
-                  ? 'bg-rose-50 text-rose-600'
+                  ? 'bg-rose-50 text-rose-800'
                   : 'text-slate-400 hover:text-slate-600'
               }`}
               title="Dạng danh sách bảng"
@@ -255,7 +255,7 @@ export const StudentManagement: React.FC = () => {
                 });
                 setIsModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
             >
               <UserPlus className="h-4 w-4" />
               <span>+ Thêm HS</span>
@@ -267,7 +267,7 @@ export const StudentManagement: React.FC = () => {
       {/* Zero students state */}
       {filteredStudents.length === 0 ? (
         <div className="rounded-2xl border border-rose-200 bg-white p-12 text-center shadow-xs">
-          <FileSpreadsheet className="mx-auto h-12 w-12 text-rose-300" />
+          <FileSpreadsheet className="mx-auto h-12 w-12 text-rose-800" />
           <h3 className="mt-3 text-base font-bold text-slate-800">
             {students.length === 0
               ? 'Chưa có học sinh nào trong lớp'
@@ -289,7 +289,7 @@ export const StudentManagement: React.FC = () => {
               </button>
               <button
                 onClick={() => setIsImportModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600"
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600"
               >
                 <Upload className="h-4 w-4" />
                 <span>Nhập tệp Excel ngay</span>
@@ -309,19 +309,19 @@ export const StudentManagement: React.FC = () => {
                 className="group relative flex flex-col items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-rose-300 hover:shadow-md cursor-pointer"
               >
                 {/* Big Avatar */}
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-50 to-pink-100 text-xl font-extrabold text-rose-600 ring-4 ring-rose-50/50">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-50 to-pink-100 text-xl font-extrabold text-rose-800 ring-4 ring-rose-50/50">
                   {letter}
                 </div>
 
                 {/* Name */}
                 <div className="mt-3 w-full text-center">
-                  <div className="truncate text-xs font-extrabold text-slate-900 uppercase group-hover:text-rose-600 transition-colors">
+                  <div className="truncate text-xs font-extrabold text-slate-900 uppercase group-hover:text-rose-800 transition-colors">
                     {student.fullName}
                   </div>
                   <div className="mt-1 text-[11px] text-slate-500">
                     <span
                       className={`font-semibold ${
-                        student.gender === 'Nữ' ? 'text-rose-500' : 'text-blue-500'
+                        student.gender === 'Nữ' ? 'text-rose-800' : 'text-blue-500'
                       }`}
                     >
                       {student.gender}
@@ -351,7 +351,7 @@ export const StudentManagement: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteStudent(student)}
-                      className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                      className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-800"
                       title="Xóa học sinh"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -392,7 +392,7 @@ export const StudentManagement: React.FC = () => {
                     <td className="py-3 px-4">
                       <span
                         className={`font-semibold ${
-                          student.gender === 'Nữ' ? 'text-rose-600' : 'text-blue-600'
+                          student.gender === 'Nữ' ? 'text-rose-800' : 'text-blue-600'
                         }`}
                       >
                         {student.gender}
@@ -419,7 +419,7 @@ export const StudentManagement: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleDeleteStudent(student)}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-800"
                             title="Xóa"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -544,7 +544,7 @@ export const StudentManagement: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600"
+                  className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600"
                 >
                   Lưu học sinh
                 </button>
@@ -600,9 +600,9 @@ export const StudentManagement: React.FC = () => {
                     type="file"
                     accept=".xlsx, .xls, .csv"
                     onChange={handleFileChange}
-                    className="mt-2.5 w-full text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-rose-500 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-rose-600"
+                    className="mt-2.5 w-full text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-rose-500 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-slate-800 hover:file:bg-rose-600"
                   />
-                  {isParsing && <div className="mt-2 text-xs text-rose-600 font-semibold">Đang xử lý dữ liệu...</div>}
+                  {isParsing && <div className="mt-2 text-xs text-rose-800 font-semibold">Đang xử lý dữ liệu...</div>}
                 </div>
               </div>
 
@@ -617,7 +617,7 @@ export const StudentManagement: React.FC = () => {
                       value="append_or_update"
                       checked={importMode === 'append_or_update'}
                       onChange={() => setImportMode('append_or_update')}
-                      className="text-rose-500 focus:ring-rose-400"
+                      className="text-rose-800 focus:ring-rose-400"
                     />
                     <span>
                       <strong className="text-slate-900">Bổ sung / cập nhật:</strong> Giữ danh sách hiện tại, cập nhật học sinh đã có theo mã số
@@ -630,7 +630,7 @@ export const StudentManagement: React.FC = () => {
                       value="replace_all"
                       checked={importMode === 'replace_all'}
                       onChange={() => setImportMode('replace_all')}
-                      className="text-rose-500 focus:ring-rose-400"
+                      className="text-rose-800 focus:ring-rose-400"
                     />
                     <span>
                       <strong className="text-rose-700">Thay thế toàn bộ:</strong> Xóa danh sách cũ và nhập danh sách mới
@@ -647,7 +647,7 @@ export const StudentManagement: React.FC = () => {
                       Xem trước dữ liệu ({parsedRows.length} dòng):
                     </span>
                     {parseErrorsCount > 0 ? (
-                      <span className="text-xs font-bold text-rose-600">
+                      <span className="text-xs font-bold text-rose-800">
                         {parseErrorsCount} dòng bị lỗi (sẽ bị bỏ qua)
                       </span>
                     ) : (
@@ -686,7 +686,7 @@ export const StudentManagement: React.FC = () => {
                                   <CheckCircle2 className="h-3.5 w-3.5" /> Hợp lệ
                                 </span>
                               ) : (
-                                <span className="text-rose-600 font-semibold">
+                                <span className="text-rose-800 font-semibold">
                                   {row.errors.join(', ')}
                                 </span>
                               )}
@@ -713,7 +713,7 @@ export const StudentManagement: React.FC = () => {
                 type="button"
                 disabled={parsedRows.length === 0}
                 onClick={handleConfirmBatchImport}
-                className="rounded-xl bg-rose-500 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 disabled:opacity-50"
+                className="rounded-xl bg-rose-500 px-5 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 disabled:opacity-50"
               >
                 Xác nhận nhập vào lớp
               </button>

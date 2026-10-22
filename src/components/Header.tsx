@@ -41,7 +41,7 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={toggleMobileMenu}
-          className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 lg:hidden"
+          className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-800 lg:hidden"
           aria-label="Mở menu"
         >
           <Menu className="h-5 w-5" />
@@ -65,13 +65,13 @@ export const Header: React.FC = () => {
           className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-rose-100 transition-colors"
           title="Tải lại dữ liệu mới nhất"
         >
-          <RefreshCw className={`h-3.5 w-3.5 text-rose-500 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3.5 w-3.5 text-rose-800 ${isLoading ? 'animate-spin' : ''}`} />
           <span className="hidden md:inline">Làm mới</span>
         </button>
 
         {/* School Year Badge */}
         <div className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 border border-rose-200">
-          <Calendar className="h-3.5 w-3.5 text-rose-500" />
+          <Calendar className="h-3.5 w-3.5 text-rose-800" />
           <span>{config?.schoolYear || '2026-2027'}</span>
         </div>
 
@@ -79,7 +79,7 @@ export const Header: React.FC = () => {
         {userRole === 'student' && currentStudentId && (
           <button
             onClick={() => openStudentProfile(currentStudentId)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-rose-600 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-500 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
           >
             <User className="h-3.5 w-3.5" />
             <span className="max-w-[120px] truncate">{currentStudentName}</span>

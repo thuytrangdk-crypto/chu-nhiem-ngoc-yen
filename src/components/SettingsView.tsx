@@ -288,7 +288,7 @@ export const SettingsView: React.FC = () => {
               onClick={() => setActiveSettingsTab(tab.id)}
               className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
                 activeSettingsTab === tab.id
-                  ? 'bg-rose-500 text-white shadow-xs'
+                  ? 'bg-rose-500 text-slate-800 shadow-xs'
                   : 'bg-white text-slate-600 hover:bg-rose-50 hover:text-slate-900 border border-slate-200'
               }`}
             >
@@ -401,7 +401,7 @@ export const SettingsView: React.FC = () => {
             <div className="pt-2">
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-6 py-2.5 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
               >
                 <Save className="h-4 w-4" />
                 <span>Lưu thông tin</span>
@@ -477,7 +477,7 @@ export const SettingsView: React.FC = () => {
                   type="checkbox"
                   checked={autoConductEnabled}
                   onChange={e => setAutoConductEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded text-rose-500 focus:ring-rose-400"
+                  className="h-4 w-4 rounded text-rose-800 focus:ring-rose-400"
                 />
                 <div>
                   <span className="text-xs font-bold text-slate-800">
@@ -555,7 +555,7 @@ export const SettingsView: React.FC = () => {
                         onClick={() => {
                           setRulesList(rulesList.filter((_, i) => i !== idx));
                         }}
-                        className="p-1 text-slate-400 hover:text-rose-600"
+                        className="p-1 text-slate-400 hover:text-rose-800"
                         title="Xóa quy tắc"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -568,7 +568,7 @@ export const SettingsView: React.FC = () => {
 
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-6 py-2.5 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
             >
               <Save className="h-4 w-4" />
               <span>Lưu quy tắc thi đua</span>
@@ -608,7 +608,7 @@ export const SettingsView: React.FC = () => {
                 />
                 <button
                   type="submit"
-                  className="flex-1 rounded-xl bg-rose-500 px-3 py-2 text-xs font-bold text-white hover:bg-rose-600"
+                  className="flex-1 rounded-xl bg-rose-500 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-rose-600"
                 >
                   Thêm
                 </button>
@@ -627,7 +627,7 @@ export const SettingsView: React.FC = () => {
             </h3>
             <button
               onClick={handleSaveSubjects}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600"
             >
               <Save className="h-4 w-4" />
               <span>Lưu danh mục môn</span>
@@ -665,7 +665,7 @@ export const SettingsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSubjectsList(subjectsList.filter((_, idx) => idx !== i))}
-                  className="p-1 text-slate-400 hover:text-rose-600"
+                  className="p-1 text-slate-400 hover:text-rose-800"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -707,7 +707,7 @@ export const SettingsView: React.FC = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Cloud className="h-5 w-5 text-rose-500" />
+                <Cloud className="h-5 w-5 text-rose-800" />
                 <h3 className="text-base font-extrabold text-slate-900">
                   Đồng bộ & Lưu trữ Supabase Cloud
                 </h3>
@@ -747,7 +747,7 @@ export const SettingsView: React.FC = () => {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
                 <div className="font-bold text-slate-800">Hướng dẫn thiết lập Supabase:</div>
                 <ol className="list-decimal list-inside space-y-1 text-slate-600">
-                  <li>Tạo một dự án mới miễn phí tại <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-rose-600 underline font-semibold">supabase.com</a>.</li>
+                  <li>Tạo một dự án mới miễn phí tại <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-rose-800 underline font-semibold">supabase.com</a>.</li>
                   <li>Mở mục <strong>SQL Editor</strong> và dán nội dung từ tệp <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 font-mono">schema.sql</code> rồi nhấn <strong>Run</strong>.</li>
                   <li>Sao chép <strong>Project URL</strong> và <strong>Service Role Key</strong> vào biến môi trường:
                     <div className="mt-1.5 bg-slate-900 text-emerald-400 p-2.5 rounded-lg font-mono text-[11px]">
@@ -799,7 +799,7 @@ export const SettingsView: React.FC = () => {
           {/* Dangerous Zone: Safe Reset Class */}
           <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-6 shadow-xs">
             <div className="flex items-center gap-2 text-rose-800 font-extrabold text-sm border-b border-rose-200 pb-2">
-              <ShieldAlert className="h-5 w-5 text-rose-600" />
+              <ShieldAlert className="h-5 w-5 text-rose-800" />
               <span>Vùng nguy hiểm: Làm sạch dữ liệu lớp</span>
             </div>
 
@@ -819,7 +819,7 @@ export const SettingsView: React.FC = () => {
                 type="button"
                 onClick={handleCleanClass}
                 disabled={cleanCodeInput !== 'XAC_NHAN_LAM_SACH_LOP'}
-                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-700 disabled:opacity-50"
+                className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 disabled:opacity-50"
               >
                 Làm sạch lớp
               </button>

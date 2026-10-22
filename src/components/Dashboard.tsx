@@ -98,14 +98,14 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Top Banner (As in Image 2) */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 via-rose-600 to-pink-600 p-6 text-white shadow-sm">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 via-rose-600 to-pink-600 p-6 text-slate-800 shadow-sm">
         <div className="relative z-10 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">
               {config?.appName || 'Trợ Lý Chủ Nhiệm'} · Lớp {config?.className || '8A3'}
             </h1>
-            <p className="mt-1 text-sm font-medium text-rose-100">
-              Giáo viên chủ nhiệm: <span className="font-bold text-white">{config?.teacherName || 'Nguyễn Thị Thùy Trang'}</span>
+            <p className="mt-1 text-sm font-medium text-rose-800">
+              Giáo viên chủ nhiệm: <span className="font-bold text-slate-800">{config?.teacherName || 'Nguyễn Thị Thùy Trang'}</span>
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -121,7 +121,7 @@ export const Dashboard: React.FC = () => {
       {activeStudents.length === 0 && (
         <div className="rounded-2xl border border-rose-200 bg-white p-6 shadow-xs">
           <div className="max-w-xl">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-600 mb-3">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-800 mb-3">
               <UserPlus className="h-5 w-5" />
             </div>
             <h3 className="text-base font-bold text-slate-900">
@@ -133,7 +133,7 @@ export const Dashboard: React.FC = () => {
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 onClick={() => setActiveTab('students')}
-                className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-rose-600 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-xs hover:bg-rose-600 transition-colors"
               >
                 <FileSpreadsheet className="h-4 w-4" />
                 <span>Nhập danh sách học sinh (Excel)</span>
@@ -166,7 +166,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="mt-1 text-xs text-slate-500">
             <span className="font-semibold text-blue-600">{boysCount}</span> Nam ·{' '}
-            <span className="font-semibold text-rose-600">{girlsCount}</span> Nữ
+            <span className="font-semibold text-rose-800">{girlsCount}</span> Nữ
           </div>
         </div>
 
@@ -176,14 +176,14 @@ export const Dashboard: React.FC = () => {
             <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">
               VẮNG (HÔM NAY)
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-800">
               <UserX className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums">
             {absentCount}
           </div>
-          <div className="mt-1 text-xs font-medium text-rose-600">
+          <div className="mt-1 text-xs font-medium text-rose-800">
             {absentCount > 0 ? (
               <span>Cần kiểm tra lý do ({lateCount > 0 ? `${lateCount} muộn` : 'nghỉ'})</span>
             ) : (
@@ -235,7 +235,7 @@ export const Dashboard: React.FC = () => {
         <div className="flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-800">
                 <AlertTriangle className="h-4 w-4" />
               </div>
               <div>
@@ -255,7 +255,7 @@ export const Dashboard: React.FC = () => {
           <div className="mt-4 flex-1 space-y-2 overflow-y-auto max-h-[380px] pr-1">
             {attentionStudents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center text-xs text-slate-400">
-                <Sparkles className="h-8 w-8 text-rose-200 mb-2" />
+                <Sparkles className="h-8 w-8 text-rose-800 mb-2" />
                 <span>Tuyệt vời! Hiện tại không có học sinh nào bị cảnh báo.</span>
               </div>
             ) : (
@@ -274,7 +274,7 @@ export const Dashboard: React.FC = () => {
                       {student.fullName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-800 group-hover:text-rose-600 uppercase">
+                      <div className="text-sm font-bold text-slate-800 group-hover:text-rose-800 uppercase">
                         {student.fullName}
                       </div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
@@ -294,7 +294,7 @@ export const Dashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-rose-500 transition-colors" />
+                  <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-rose-800 transition-colors" />
                 </button>
               ))
             )}
@@ -346,7 +346,7 @@ export const Dashboard: React.FC = () => {
                       <div
                         className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
                           isViolation
-                            ? 'bg-rose-50 text-rose-600'
+                            ? 'bg-rose-50 text-rose-800'
                             : 'bg-emerald-50 text-emerald-600'
                         }`}
                       >
@@ -359,7 +359,7 @@ export const Dashboard: React.FC = () => {
                       <div>
                         <div
                           onClick={() => stu && openStudentProfile(stu.id)}
-                          className="text-xs font-bold text-slate-900 hover:text-rose-600 cursor-pointer uppercase"
+                          className="text-xs font-bold text-slate-900 hover:text-rose-800 cursor-pointer uppercase"
                         >
                           {stu?.fullName || 'Học sinh'}
                         </div>
@@ -370,7 +370,7 @@ export const Dashboard: React.FC = () => {
                           {inc.ruleName} ·{' '}
                           <span
                             className={`font-semibold ${
-                              isViolation ? 'text-rose-600' : 'text-emerald-600'
+                              isViolation ? 'text-rose-800' : 'text-emerald-600'
                             }`}
                           >
                             {isViolation ? `-${inc.points}đ` : `+${inc.points}đ`}
