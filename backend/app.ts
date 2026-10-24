@@ -178,7 +178,7 @@ app.use('/api', async (req, res, next) => {
     if (!supabaseClient) throw new Error('Cần đặt SUPABASE_URL và SUPABASE_SECRET_KEY trên máy chủ.');
     if (!/^[a-zA-Z0-9_-]{8,120}$/.test(scope)) throw new Error('Cần đặt APP_DATA_SCOPE riêng cho lớp (8–120 ký tự).');
     const read = await supabaseClient.from('ngoc_yen_app_state').select('payload,revision').eq('scope', scope).maybeSingle();
-    if (read.error) throw new Error('Chưa đọc được cơ sở dữ liệu. Kiểm tra khóa Supabase và chạy schema.sql.');
+if (read.error) throw new Error('Không thể đọc dữ liệu lớp. Vui lòng kiểm tra kết nối Supabase.');
     let row = read.data;
     if (!row) {
       if ((process.env.INITIAL_TEACHER_PASSWORD || '').length < 12) throw new Error('Lớp mới cần INITIAL_TEACHER_PASSWORD dài ít nhất 12 ký tự.');
@@ -214,7 +214,7 @@ app.use('/api', async (req, res, next) => {
     }) as typeof res.json;
     next();
   } catch (error) {
-    res.status(503).json({error: (error as Error).message});
+    res.status(500).json({error: (error as Error).message});
   }
 });
 

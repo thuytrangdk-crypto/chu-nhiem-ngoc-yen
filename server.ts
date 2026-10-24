@@ -1,4 +1,4 @@
-import app from './backend/app';
+import app from './backend/app.ts';
 import express from 'express';
 import path from 'node:path';
 async function start() {
