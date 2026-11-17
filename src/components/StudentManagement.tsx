@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
-import { Student } from '../types';
+import { Student, SemesterId } from '../types';
 import {
   downloadStudentTemplate,
   parseStudentExcel,
@@ -10,6 +10,11 @@ import {
   ParsedStudentRow,
   formatDateVN,
 } from '../services/excel';
+import {
+  formatSemesterLabel,
+  getActiveSemester,
+  getAvailableSchoolYears,
+} from '../utils/conduct';
 import {
   Search,
   LayoutGrid,
@@ -44,6 +49,12 @@ export const StudentManagement: React.FC = () => {
   const [parsedRows, setParsedRows] = useState<ParsedStudentRow[]>([]);
   const [parseErrorsCount, setParseErrorsCount] = useState(0);
   const [isParsing, setIsParsing] = useState(false);
+
+  // Conduct Export modal
+  const [isExportConductModalOpen, setIsExportConductModalOpen] = useState(false);
+  const [exportSchoolYear, setExportSchoolYear] = useState(() => getActiveSemester(config).schoolYear);
+  const [exportSemesterScope, setExportSemesterScope] = useState<SemesterId | 'ALL'>('ALL');
+  const [isExportingConduct, setIsExportingConduct] = useState(false);
 
   // Filter students
   const filteredStudents = students.filter(s => {
@@ -143,15 +154,36 @@ export const StudentManagement: React.FC = () => {
     }
   };
 
-  // Export class conduct report
+  // Open class conduct export modal
+  const handleOpenExportConductModal = () => {
+    const active = getActiveSemester(config);
+    setExportSchoolYear(active.schoolYear);
+    setExportSemesterScope(active.semester);
+    setIsExportConductModalOpen(true);
+  };
+
+  // Execute class conduct export for chosen school year & semester scope
   const handleExportConductReport = async () => {
     if (!config || !conductSettings) return;
     try {
+      setIsExportingConduct(true);
       const incidents = await api.getIncidents();
-      exportClassConductExcel(students, incidents, conductSettings, 'Toàn năm học', config);
-      showToast('Đã xuất báo cáo thi đua cả lớp thành công');
+      exportClassConductExcel(
+        students,
+        incidents,
+        conductSettings,
+        exportSchoolYear,
+        exportSemesterScope,
+        config
+      );
+      setIsExportConductModalOpen(false);
+      showToast(
+        `Đã xuất báo cáo thi đua (${formatSemesterLabel(exportSemesterScope)} · ${exportSchoolYear}) thành công`
+      );
     } catch (err: any) {
       showToast(err.message, 'error');
+    } finally {
+      setIsExportingConduct(false);
     }
   };
 
@@ -228,7 +260,7 @@ export const StudentManagement: React.FC = () => {
             </button>
 
             <button
-              onClick={handleExportConductReport}
+              onClick={handleOpenExportConductModal}
               className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-800 shadow-xs hover:bg-purple-100 transition-colors"
             >
               <Award className="h-4 w-4 text-purple-600" />
@@ -717,6 +749,109 @@ export const StudentManagement: React.FC = () => {
               >
                 Xác nhận nhập vào lớp
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL: Xuất Báo Cáo Thi Đua Theo Học Kỳ / Cả Năm */}
+      {isExportConductModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-rose-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-purple-600" />
+                <h3 className="text-base font-bold text-slate-900">
+                  Xuất báo cáo thi đua lớp
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExportConductModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700">Năm học</label>
+                <select
+                  value={exportSchoolYear}
+                  onChange={e => setExportSchoolYear(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-rose-500"
+                >
+                  {getAvailableSchoolYears(config).map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Phạm vi báo cáo</label>
+                <div className="space-y-2">
+                  {([
+                    {
+                      id: 'HK1' as const,
+                      title: 'Học kỳ I',
+                      desc: 'Chỉ tổng hợp điểm khởi đầu, thưởng/trừ, điểm còn lại & hạnh kiểm HK I.',
+                    },
+                    {
+                      id: 'HK2' as const,
+                      title: 'Học kỳ II',
+                      desc: 'Chỉ tổng hợp điểm khởi đầu, thưởng/trừ, điểm còn lại & hạnh kiểm HK II.',
+                    },
+                    {
+                      id: 'ALL' as const,
+                      title: 'Cả năm học',
+                      desc: 'Xuất đầy đủ các cột riêng biệt cho HK I và HK II (không cộng dồn điểm 200 thành 400).',
+                    },
+                  ]).map(opt => (
+                    <label
+                      key={opt.id}
+                      className={`flex items-start gap-2.5 rounded-xl border p-3 cursor-pointer transition-colors ${
+                        exportSemesterScope === opt.id
+                          ? 'border-rose-400 bg-rose-50/40'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="exportSemesterScope"
+                        value={opt.id}
+                        checked={exportSemesterScope === opt.id}
+                        onChange={() => setExportSemesterScope(opt.id)}
+                        className="mt-0.5 text-rose-700 focus:ring-rose-400"
+                      />
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">{opt.title}</div>
+                        <div className="text-[11px] text-slate-500">{opt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsExportConductModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={isExportingConduct}
+                  onClick={handleExportConductReport}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500 px-4 py-2 text-xs font-bold text-slate-800 shadow-xs hover:bg-rose-600 disabled:opacity-50"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>{isExportingConduct ? 'Đang xuất...' : 'Xuất tệp Excel (.xlsx)'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
-import { ConductRule, Subject } from '../types';
+import { ConductRule, SchoolYearSemesters, Subject } from '../types';
+import {
+  createDefaultSchoolYearSemesters,
+  getActiveSemester,
+  getEffectiveSemesterConfigs,
+  validateSemesterConfigs,
+} from '../utils/conduct';
+import { formatDateVN } from '../services/excel';
 import {
   Settings,
   Scale,
@@ -18,6 +25,7 @@ import {
   RefreshCw,
   ShieldAlert,
   HelpCircle,
+  Calendar,
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
@@ -58,6 +66,10 @@ export const SettingsView: React.FC = () => {
   const [autoConductEnabled, setAutoConductEnabled] = useState<boolean>(
     Boolean(config?.autoConductFromAttendance?.enabled)
   );
+  const [semesterConfigs, setSemesterConfigs] = useState<Record<string, SchoolYearSemesters>>(
+    () => getEffectiveSemesterConfigs(config)
+  );
+  const [newSchoolYearInput, setNewSchoolYearInput] = useState('');
 
   // New rule input state
   const [newRuleCode, setNewRuleCode] = useState('');
@@ -77,17 +89,98 @@ export const SettingsView: React.FC = () => {
   // Class clean confirmation
   const [cleanCodeInput, setCleanCodeInput] = useState('');
 
+  useEffect(() => {
+    if (config) {
+      setGeneralForm({
+        appName: config.appName || 'Trợ lý chủ nhiệm',
+        schoolName: config.schoolName || '',
+        className: config.className || '',
+        teacherName: config.teacherName || '',
+        schoolYear: config.schoolYear || '2026-2027',
+        logoUrl: config.logoUrl || '',
+        absenceThreshold: config.attentionThreshold?.absenceDays || 2,
+        violationsThreshold: config.attentionThreshold?.violationsCount || 2,
+      });
+      setAutoConductEnabled(Boolean(config.autoConductFromAttendance?.enabled));
+      setSemesterConfigs(getEffectiveSemesterConfigs(config));
+    }
+  }, [config]);
+
+  useEffect(() => {
+    if (conductSettings) {
+      setInitialScoreStr(String(conductSettings.initialScore ?? 200));
+      setThresholdGoodStr(String(conductSettings.thresholdGood ?? 190));
+      setThresholdFairStr(String(conductSettings.thresholdFair ?? 160));
+      setThresholdPassStr(String(conductSettings.thresholdPass ?? 130));
+      setRulesList(conductSettings.rules ? [...conductSettings.rules] : []);
+    }
+  }, [conductSettings]);
+
+  useEffect(() => {
+    setSubjectsList([...subjects]);
+  }, [subjects]);
+
+  const updateSemesterDate = (
+    yearKey: string,
+    semKey: 'hk1' | 'hk2',
+    field: 'startDate' | 'endDate',
+    value: string
+  ) => {
+    setSemesterConfigs(prev => ({
+      ...prev,
+      [yearKey]: {
+        ...prev[yearKey],
+        schoolYear: yearKey,
+        [semKey]: {
+          ...prev[yearKey][semKey],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const handleAddSchoolYearConfig = () => {
+    const clean = newSchoolYearInput.trim();
+    if (!/^\d{4}-\d{4}$/.test(clean)) {
+      showToast('Vui lòng nhập năm học theo định dạng YYYY-YYYY (ví dụ: 2028-2029)', 'error');
+      return;
+    }
+    if (semesterConfigs[clean]) {
+      showToast(`Năm học ${clean} đã có trong danh sách cấu hình`, 'info');
+      return;
+    }
+    setSemesterConfigs(prev => ({
+      ...prev,
+      [clean]: createDefaultSchoolYearSemesters(clean),
+    }));
+    setNewSchoolYearInput('');
+    showToast(`Đã thêm cấu hình lịch học kỳ cho năm học ${clean}`);
+  };
+
   // 1. Save General Settings
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const cleanYear = generalForm.schoolYear.trim();
+      const nextSemesterConfigs = { ...semesterConfigs };
+      if (cleanYear && !nextSemesterConfigs[cleanYear]) {
+        nextSemesterConfigs[cleanYear] = createDefaultSchoolYearSemesters(cleanYear);
+      }
+
+      const semErr = validateSemesterConfigs(nextSemesterConfigs);
+      if (semErr) {
+        showToast(semErr, 'error');
+        return;
+      }
+
       const res = await api.updateConfig({
         appName: generalForm.appName,
         schoolName: generalForm.schoolName,
         className: generalForm.className,
         teacherName: generalForm.teacherName,
-        schoolYear: generalForm.schoolYear,
+        schoolYear: cleanYear,
         logoUrl: generalForm.logoUrl,
+        semesterConfigs: nextSemesterConfigs,
         attentionThreshold: {
           absenceDays: Number(generalForm.absenceThreshold) || 2,
           violationsCount: Number(generalForm.violationsThreshold) || 2,
@@ -126,6 +219,12 @@ export const SettingsView: React.FC = () => {
       return;
     }
 
+    const semErr = validateSemesterConfigs(semesterConfigs);
+    if (semErr) {
+      showToast(semErr, 'error');
+      return;
+    }
+
     try {
       await api.saveConductRules({
         initialScore,
@@ -135,7 +234,8 @@ export const SettingsView: React.FC = () => {
         rules: rulesList,
       });
 
-      await api.updateConfig({
+      const cfgRes = await api.updateConfig({
+        semesterConfigs,
         autoConductFromAttendance: {
           enabled: autoConductEnabled,
           unexcusedAbsenceRuleId: 'rule_v4',
@@ -143,7 +243,11 @@ export const SettingsView: React.FC = () => {
         },
       });
 
-      showToast('Đã lưu quy tắc thi đua & nề nếp thành công');
+      if (cfgRes?.config) {
+        updateConfigState(cfgRes.config);
+      }
+
+      showToast('Đã lưu quy tắc thi đua & lịch học kỳ thành công');
       refreshData();
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -489,6 +593,150 @@ export const SettingsView: React.FC = () => {
                 </div>
               </label>
             </div>
+
+            {/* Configurable Semester Dates per School Year */}
+            {(() => {
+              const previewActive = getActiveSemester({
+                ...config,
+                schoolYear: generalForm.schoolYear,
+                semesterConfigs,
+              });
+              const yearKeys = Object.keys(semesterConfigs).sort((a, b) => a.localeCompare(b));
+
+              return (
+                <div className="rounded-xl border border-rose-200 bg-rose-50/30 p-4 space-y-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-100 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-rose-800" />
+                      <div>
+                        <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">
+                          Thời gian Học kỳ I & Học kỳ II theo năm học
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          Điểm thi đua ({initialScoreStr || 200}đ) được khởi tạo độc lập cho từng học kỳ dựa theo khoảng ngày cấu hình bên dưới.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="rounded-lg bg-white border border-rose-200 px-2.5 py-1 text-[11px] font-bold text-rose-800">
+                      Hôm nay: {previewActive.label} · {previewActive.schoolYear}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {yearKeys.map(yearKey => {
+                      const sy = semesterConfigs[yearKey];
+                      const isCurrentActiveYear = yearKey === generalForm.schoolYear;
+                      return (
+                        <div
+                          key={yearKey}
+                          className={`rounded-xl border bg-white p-3.5 space-y-2.5 ${
+                            isCurrentActiveYear ? 'border-rose-300' : 'border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-extrabold text-slate-900">
+                                Năm học {yearKey}
+                              </span>
+                              {isCurrentActiveYear && (
+                                <span className="rounded bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800">
+                                  Năm học hiện tại
+                                </span>
+                              )}
+                            </div>
+                            {!isCurrentActiveYear && yearKeys.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = { ...semesterConfigs };
+                                  delete next[yearKey];
+                                  setSemesterConfigs(next);
+                                }}
+                                className="text-[11px] font-semibold text-slate-400 hover:text-rose-800"
+                              >
+                                Xóa năm học
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5 space-y-2">
+                              <div className="text-[11px] font-bold text-slate-700">
+                                Học kỳ I ({formatDateVN(sy.hk1.startDate)} – {formatDateVN(sy.hk1.endDate)})
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-[10px] font-semibold text-slate-500">Ngày bắt đầu</label>
+                                  <input
+                                    type="date"
+                                    value={sy.hk1.startDate}
+                                    onChange={e => updateSemesterDate(yearKey, 'hk1', 'startDate', e.target.value)}
+                                    className="mt-0.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs focus:outline-rose-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold text-slate-500">Ngày kết thúc</label>
+                                  <input
+                                    type="date"
+                                    value={sy.hk1.endDate}
+                                    onChange={e => updateSemesterDate(yearKey, 'hk1', 'endDate', e.target.value)}
+                                    className="mt-0.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs focus:outline-rose-500"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5 space-y-2">
+                              <div className="text-[11px] font-bold text-slate-700">
+                                Học kỳ II ({formatDateVN(sy.hk2.startDate)} – {formatDateVN(sy.hk2.endDate)})
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-[10px] font-semibold text-slate-500">Ngày bắt đầu</label>
+                                  <input
+                                    type="date"
+                                    value={sy.hk2.startDate}
+                                    onChange={e => updateSemesterDate(yearKey, 'hk2', 'startDate', e.target.value)}
+                                    className="mt-0.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs focus:outline-rose-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold text-slate-500">Ngày kết thúc</label>
+                                  <input
+                                    type="date"
+                                    value={sy.hk2.endDate}
+                                    onChange={e => updateSemesterDate(yearKey, 'hk2', 'endDate', e.target.value)}
+                                    className="mt-0.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs focus:outline-rose-500"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder="Thêm năm học (VD: 2028-2029)"
+                      value={newSchoolYearInput}
+                      onChange={e => setNewSchoolYearInput(e.target.value)}
+                      className="w-52 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono focus:outline-rose-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddSchoolYearConfig}
+                      className="inline-flex items-center gap-1 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-bold text-rose-800 hover:bg-rose-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Thêm năm học</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Rules Table */}
             <div>

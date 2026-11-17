@@ -4,6 +4,268 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+
+// src/utils/conduct.ts
+function getLocalTodayDateStr(now = /* @__PURE__ */ new Date()) {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function formatSemesterLabel(semester) {
+  if (semester === "HK1") return "H\u1ECDc k\u1EF3 I";
+  if (semester === "HK2") return "H\u1ECDc k\u1EF3 II";
+  return "C\u1EA3 n\u0103m";
+}
+function getConductSemesterKey(schoolYear, semester) {
+  return `${schoolYear}__${semester}`;
+}
+function parseNextSchoolYear(schoolYear) {
+  const match = String(schoolYear || "").trim().match(/^(\d{4})-(\d{4})$/);
+  if (!match) return null;
+  const start = parseInt(match[1], 10) + 1;
+  const end = parseInt(match[2], 10) + 1;
+  return `${start}-${end}`;
+}
+function createDefaultSchoolYearSemesters(schoolYear) {
+  const match = String(schoolYear || "").trim().match(/^(\d{4})-(\d{4})$/);
+  const y1 = match ? parseInt(match[1], 10) : (/* @__PURE__ */ new Date()).getFullYear();
+  const y2 = match ? parseInt(match[2], 10) : y1 + 1;
+  return {
+    schoolYear: `${y1}-${y2}`,
+    hk1: {
+      startDate: `${y1}-09-05`,
+      endDate: `${y2}-01-17`
+    },
+    hk2: {
+      startDate: `${y2}-01-18`,
+      endDate: `${y2}-05-31`
+    }
+  };
+}
+function getEffectiveSemesterConfigs(config) {
+  const result = {};
+  const raw = config?.semesterConfigs || {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (val && val.hk1?.startDate && val.hk1?.endDate && val.hk2?.startDate && val.hk2?.endDate) {
+      result[key] = {
+        schoolYear: val.schoolYear || key,
+        hk1: { startDate: val.hk1.startDate, endDate: val.hk1.endDate },
+        hk2: { startDate: val.hk2.startDate, endDate: val.hk2.endDate }
+      };
+    }
+  }
+  const currentYear = (config?.schoolYear || "2026-2027").trim();
+  if (!result[currentYear]) {
+    result[currentYear] = createDefaultSchoolYearSemesters(currentYear);
+  }
+  const nextYear = parseNextSchoolYear(currentYear);
+  if (nextYear && !result[nextYear]) {
+    result[nextYear] = createDefaultSchoolYearSemesters(nextYear);
+  }
+  return result;
+}
+function validateSemesterConfigs(configs) {
+  for (const [yearKey, sy] of Object.entries(configs)) {
+    if (!sy?.hk1?.startDate || !sy?.hk1?.endDate || !sy?.hk2?.startDate || !sy?.hk2?.endDate) {
+      return `N\u0103m h\u1ECDc ${yearKey}: Vui l\xF2ng nh\u1EADp \u0111\u1EA7y \u0111\u1EE7 ng\xE0y b\u1EAFt \u0111\u1EA7u v\xE0 ng\xE0y k\u1EBFt th\xFAc cho c\u1EA3 2 h\u1ECDc k\u1EF3.`;
+    }
+    if (sy.hk1.startDate > sy.hk1.endDate) {
+      return `N\u0103m h\u1ECDc ${yearKey}: Ng\xE0y b\u1EAFt \u0111\u1EA7u H\u1ECDc k\u1EF3 I ph\u1EA3i tr\u01B0\u1EDBc ho\u1EB7c b\u1EB1ng ng\xE0y k\u1EBFt th\xFAc H\u1ECDc k\u1EF3 I.`;
+    }
+    if (sy.hk2.startDate > sy.hk2.endDate) {
+      return `N\u0103m h\u1ECDc ${yearKey}: Ng\xE0y b\u1EAFt \u0111\u1EA7u H\u1ECDc k\u1EF3 II ph\u1EA3i tr\u01B0\u1EDBc ho\u1EB7c b\u1EB1ng ng\xE0y k\u1EBFt th\xFAc H\u1ECDc k\u1EF3 II.`;
+    }
+    if (sy.hk1.endDate >= sy.hk2.startDate) {
+      return `N\u0103m h\u1ECDc ${yearKey}: Ng\xE0y b\u1EAFt \u0111\u1EA7u H\u1ECDc k\u1EF3 II ph\u1EA3i sau ng\xE0y k\u1EBFt th\xFAc H\u1ECDc k\u1EF3 I.`;
+    }
+  }
+  return null;
+}
+function resolveDateToSemester(dateStr, config, preferredSchoolYear) {
+  const configs = getEffectiveSemesterConfigs(config);
+  const activeYear = (preferredSchoolYear || config?.schoolYear || "2026-2027").trim();
+  const orderedYears = [
+    ...configs[activeYear] ? [configs[activeYear]] : [],
+    ...Object.values(configs).filter((sy) => sy.schoolYear !== activeYear).sort((a, b) => a.schoolYear.localeCompare(b.schoolYear))
+  ];
+  for (const sy of orderedYears) {
+    if (dateStr >= sy.hk1.startDate && dateStr <= sy.hk1.endDate) {
+      return {
+        schoolYear: sy.schoolYear,
+        semester: "HK1",
+        isWithinConfiguredRange: true,
+        matchedBy: "configured"
+      };
+    }
+    if (dateStr >= sy.hk2.startDate && dateStr <= sy.hk2.endDate) {
+      return {
+        schoolYear: sy.schoolYear,
+        semester: "HK2",
+        isWithinConfiguredRange: true,
+        matchedBy: "configured"
+      };
+    }
+  }
+  for (const sy of orderedYears) {
+    if (dateStr > sy.hk1.endDate && dateStr < sy.hk2.startDate) {
+      return {
+        schoolYear: sy.schoolYear,
+        semester: "HK1",
+        isWithinConfiguredRange: false,
+        matchedBy: "fallback"
+      };
+    }
+  }
+  const parts = String(dateStr || "").split("-");
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (!isNaN(year) && !isNaN(month)) {
+      const inferredYear = month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+      const sy = configs[inferredYear];
+      if (sy) {
+        const sem = dateStr >= sy.hk2.startDate ? "HK2" : "HK1";
+        return {
+          schoolYear: inferredYear,
+          semester: sem,
+          isWithinConfiguredRange: false,
+          matchedBy: "fallback"
+        };
+      }
+      return {
+        schoolYear: inferredYear,
+        semester: month >= 8 || month === 1 ? "HK1" : "HK2",
+        isWithinConfiguredRange: false,
+        matchedBy: "fallback"
+      };
+    }
+  }
+  return {
+    schoolYear: activeYear,
+    semester: "HK1",
+    isWithinConfiguredRange: false,
+    matchedBy: "fallback"
+  };
+}
+function getActiveSemester(config, referenceDateStr) {
+  const refDate = referenceDateStr || getLocalTodayDateStr();
+  const configs = getEffectiveSemesterConfigs(config);
+  const configuredActiveYear = (config?.schoolYear || "2026-2027").trim();
+  const primary = configs[configuredActiveYear];
+  if (primary) {
+    if (refDate >= primary.hk1.startDate && refDate <= primary.hk1.endDate) {
+      return {
+        schoolYear: primary.schoolYear,
+        semester: "HK1",
+        label: "H\u1ECDc k\u1EF3 I",
+        isWithinConfiguredRange: true
+      };
+    }
+    if (refDate >= primary.hk2.startDate && refDate <= primary.hk2.endDate) {
+      return {
+        schoolYear: primary.schoolYear,
+        semester: "HK2",
+        label: "H\u1ECDc k\u1EF3 II",
+        isWithinConfiguredRange: true
+      };
+    }
+  }
+  for (const sy of Object.values(configs).sort((a, b) => a.schoolYear.localeCompare(b.schoolYear))) {
+    if (refDate >= sy.hk1.startDate && refDate <= sy.hk1.endDate) {
+      return {
+        schoolYear: sy.schoolYear,
+        semester: "HK1",
+        label: "H\u1ECDc k\u1EF3 I",
+        isWithinConfiguredRange: true
+      };
+    }
+    if (refDate >= sy.hk2.startDate && refDate <= sy.hk2.endDate) {
+      return {
+        schoolYear: sy.schoolYear,
+        semester: "HK2",
+        label: "H\u1ECDc k\u1EF3 II",
+        isWithinConfiguredRange: true
+      };
+    }
+  }
+  if (primary) {
+    const sem = refDate >= primary.hk2.startDate ? "HK2" : "HK1";
+    return {
+      schoolYear: primary.schoolYear,
+      semester: sem,
+      label: formatSemesterLabel(sem),
+      isWithinConfiguredRange: false
+    };
+  }
+  return {
+    schoolYear: configuredActiveYear,
+    semester: "HK1",
+    label: "H\u1ECDc k\u1EF3 I",
+    isWithinConfiguredRange: false
+  };
+}
+function getIncidentSemester(incident, config) {
+  if (incident.schoolYear && (incident.semester === "HK1" || incident.semester === "HK2")) {
+    return {
+      schoolYear: incident.schoolYear,
+      semester: incident.semester
+    };
+  }
+  const resolved = resolveDateToSemester(incident.date, config);
+  return {
+    schoolYear: resolved.schoolYear,
+    semester: resolved.semester
+  };
+}
+function calculateConductRank(score, settings) {
+  const tGood = settings?.thresholdGood ?? 190;
+  const tFair = settings?.thresholdFair ?? 160;
+  const tPass = settings?.thresholdPass ?? 130;
+  if (score >= tGood) {
+    return { rank: "T\u1ED1t", colorClass: "text-emerald-600" };
+  }
+  if (score >= tFair) {
+    return { rank: "Kh\xE1", colorClass: "text-blue-600" };
+  }
+  if (score >= tPass) {
+    return { rank: "\u0110\u1EA1t", colorClass: "text-amber-600" };
+  }
+  return { rank: "Ch\u01B0a \u0111\u1EA1t", colorClass: "text-rose-800" };
+}
+function calculateSemesterConductSummary(studentId, schoolYear, semester, incidents, settings, config) {
+  const initialScore = settings?.initialScore ?? 200;
+  let totalReward = 0;
+  let totalViolation = 0;
+  let violationCount = 0;
+  let rewardCount = 0;
+  for (const inc of incidents) {
+    if (inc.studentId !== studentId) continue;
+    const tag = getIncidentSemester(inc, config);
+    if (tag.schoolYear !== schoolYear || tag.semester !== semester) continue;
+    const pts = Math.abs(Number(inc.points) || 0);
+    if (inc.category === "reward") {
+      totalReward += pts;
+      rewardCount += 1;
+    } else {
+      totalViolation += pts;
+      violationCount += 1;
+    }
+  }
+  const finalScore = initialScore + totalReward - totalViolation;
+  const { rank } = calculateConductRank(finalScore, settings);
+  return {
+    initialScore,
+    totalReward,
+    totalViolation,
+    finalScore,
+    rank,
+    violationCount,
+    rewardCount
+  };
+}
+
+// backend/app.ts
 dotenv.config();
 var app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -64,6 +326,7 @@ var defaultDb = {
     schoolYear: "2026-2027",
     adminPasswordHash: INITIAL_TEACHER_HASH,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    semesterConfigs: getEffectiveSemesterConfigs({ schoolYear: "2026-2027" }),
     attentionThreshold: {
       absenceDays: 2,
       violationsCount: 2
@@ -101,8 +364,59 @@ var defaultDb = {
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   },
   honorBoards: {},
+  conductSemesterStates: {},
   scoreBackups: {}
 };
+function syncConductSemesterStates(database) {
+  const states = { ...database.conductSemesterStates || {} };
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const initialScore = database.conductSettings?.initialScore ?? 200;
+  const active = getActiveSemester(database.config);
+  const pairs = /* @__PURE__ */ new Map();
+  pairs.set(getConductSemesterKey(active.schoolYear, active.semester), {
+    schoolYear: active.schoolYear,
+    semester: active.semester
+  });
+  const currentYear = database.config?.schoolYear || active.schoolYear;
+  pairs.set(getConductSemesterKey(currentYear, "HK1"), { schoolYear: currentYear, semester: "HK1" });
+  pairs.set(getConductSemesterKey(currentYear, "HK2"), { schoolYear: currentYear, semester: "HK2" });
+  for (const existingState of Object.values(states)) {
+    if (existingState?.schoolYear && (existingState.semester === "HK1" || existingState.semester === "HK2")) {
+      pairs.set(getConductSemesterKey(existingState.schoolYear, existingState.semester), {
+        schoolYear: existingState.schoolYear,
+        semester: existingState.semester
+      });
+    }
+  }
+  for (const inc of database.incidents) {
+    const tag = getIncidentSemester(inc, database.config);
+    pairs.set(getConductSemesterKey(tag.schoolYear, tag.semester), tag);
+  }
+  const activeStudents = database.students.filter((s) => s.status === "active");
+  for (const [key, { schoolYear, semester }] of pairs.entries()) {
+    const prev = states[key];
+    const studentScores = {};
+    for (const stu of activeStudents) {
+      studentScores[stu.id] = calculateSemesterConductSummary(
+        stu.id,
+        schoolYear,
+        semester,
+        database.incidents,
+        database.conductSettings,
+        database.config
+      );
+    }
+    states[key] = {
+      schoolYear,
+      semester,
+      initialScore,
+      initializedAt: prev?.initializedAt || now,
+      updatedAt: now,
+      studentScores
+    };
+  }
+  database.conductSemesterStates = states;
+}
 var db = structuredClone(defaultDb);
 var dirty = false;
 var revision = 0;
@@ -162,7 +476,7 @@ app.use("/api", async (req, res, next) => {
     if (!supabaseClient) throw new Error("C\u1EA7n \u0111\u1EB7t SUPABASE_URL v\xE0 SUPABASE_SECRET_KEY tr\xEAn m\xE1y ch\u1EE7.");
     if (!/^[a-zA-Z0-9_-]{8,120}$/.test(scope)) throw new Error("C\u1EA7n \u0111\u1EB7t APP_DATA_SCOPE ri\xEAng cho l\u1EDBp (8\u2013120 k\xFD t\u1EF1).");
     const read = await supabaseClient.from("ngoc_yen_app_state").select("payload,revision").eq("scope", scope).maybeSingle();
-    if (read.error) throw new Error("Ch\u01B0a \u0111\u1ECDc \u0111\u01B0\u1EE3c c\u01A1 s\u1EDF d\u1EEF li\u1EC7u. Ki\u1EC3m tra kh\xF3a Supabase v\xE0 ch\u1EA1y schema.sql.");
+    if (read.error) throw new Error("Kh\xF4ng th\u1EC3 \u0111\u1ECDc d\u1EEF li\u1EC7u l\u1EDBp. Vui l\xF2ng ki\u1EC3m tra k\u1EBFt n\u1ED1i Supabase.");
     let row = read.data;
     if (!row) {
       if ((process.env.INITIAL_TEACHER_PASSWORD || "").length < 12) throw new Error("L\u1EDBp m\u1EDBi c\u1EA7n INITIAL_TEACHER_PASSWORD d\xE0i \xEDt nh\u1EA5t 12 k\xFD t\u1EF1.");
@@ -200,7 +514,7 @@ app.use("/api", async (req, res, next) => {
     });
     next();
   } catch (error) {
-    res.status(503).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 function checkRateLimit(key) {
@@ -426,10 +740,35 @@ app.post("/api/auth/reset-student-password", authMiddleware, teacherOnly, (req, 
 });
 app.get("/api/config", (req, res) => {
   const { adminPasswordHash, ...safeConfig } = db.config;
-  res.json(safeConfig);
+  res.json({
+    ...safeConfig,
+    semesterConfigs: getEffectiveSemesterConfigs(db.config)
+  });
 });
 app.post("/api/config", authMiddleware, teacherOnly, (req, res) => {
-  const { appName, schoolName, className, teacherName, schoolYear, logoUrl, attentionThreshold, autoConductFromAttendance } = req.body;
+  const {
+    appName,
+    schoolName,
+    className,
+    teacherName,
+    schoolYear,
+    logoUrl,
+    semesterConfigs,
+    attentionThreshold,
+    autoConductFromAttendance
+  } = req.body;
+  if (semesterConfigs !== void 0) {
+    if (!semesterConfigs || typeof semesterConfigs !== "object") {
+      res.status(400).json({ error: "C\u1EA5u h\xECnh th\u1EDDi gian h\u1ECDc k\u1EF3 kh\xF4ng h\u1EE3p l\u1EC7" });
+      return;
+    }
+    const validationError = validateSemesterConfigs(semesterConfigs);
+    if (validationError) {
+      res.status(400).json({ error: validationError });
+      return;
+    }
+    db.config.semesterConfigs = semesterConfigs;
+  }
   if (appName) db.config.appName = String(appName).trim();
   if (schoolName !== void 0) db.config.schoolName = String(schoolName).trim();
   if (className) db.config.className = String(className).trim();
@@ -449,7 +788,9 @@ app.post("/api/config", authMiddleware, teacherOnly, (req, res) => {
       lateRuleId: autoConductFromAttendance.lateRuleId
     };
   }
+  db.config.semesterConfigs = getEffectiveSemesterConfigs(db.config);
   db.config.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  syncConductSemesterStates(db);
   saveDatabase();
   const { adminPasswordHash, ...safeConfig } = db.config;
   res.json({ success: true, config: safeConfig });
@@ -664,6 +1005,7 @@ app.post("/api/students/clean-class", authMiddleware, teacherOnly, (req, res) =>
   db.scores = [];
   db.incidents = [];
   db.honorBoards = {};
+  db.conductSemesterStates = {};
   db.seating.slots.forEach((s) => s.studentId = null);
   saveDatabase();
   res.json({
@@ -709,6 +1051,7 @@ app.post("/api/attendance", authMiddleware, teacherOnly, (req, res) => {
     if (autoConduct?.enabled) {
       const student = db.students.find((s) => s.id === item.studentId);
       if (student) {
+        const resolvedSem = resolveDateToSemester(date, db.config);
         if (item.status === "unexcused" && autoConduct.unexcusedAbsenceRuleId) {
           const rule = db.conductSettings.rules.find((r) => r.id === autoConduct.unexcusedAbsenceRuleId);
           if (rule) {
@@ -718,6 +1061,8 @@ app.post("/api/attendance", authMiddleware, teacherOnly, (req, res) => {
                 id: `inc_auto_att_${date}_${item.studentId}`,
                 studentId: item.studentId,
                 date,
+                schoolYear: resolvedSem.schoolYear,
+                semester: resolvedSem.semester,
                 ruleId: rule.id,
                 ruleName: rule.name,
                 category: "violation",
@@ -738,6 +1083,8 @@ app.post("/api/attendance", authMiddleware, teacherOnly, (req, res) => {
                 id: `inc_auto_att_late_${date}_${item.studentId}`,
                 studentId: item.studentId,
                 date,
+                schoolYear: resolvedSem.schoolYear,
+                semester: resolvedSem.semester,
                 ruleId: rule.id,
                 ruleName: rule.name,
                 category: "violation",
@@ -754,6 +1101,9 @@ app.post("/api/attendance", authMiddleware, teacherOnly, (req, res) => {
     }
   }
   db.attendance.push(...newRecords);
+  if (autoConduct?.enabled) {
+    syncConductSemesterStates(db);
+  }
   saveDatabase();
   res.json({ success: true, count: newRecords.length, message: `\u0110\xE3 l\u01B0u \u0111i\u1EC3m danh ng\xE0y ${date} th\xE0nh c\xF4ng` });
 });
@@ -890,13 +1240,52 @@ app.post("/api/conduct/rules", authMiddleware, teacherOnly, (req, res) => {
   if (thresholdFair !== void 0) db.conductSettings.thresholdFair = Number(thresholdFair);
   if (thresholdPass !== void 0) db.conductSettings.thresholdPass = Number(thresholdPass);
   if (Array.isArray(rules)) db.conductSettings.rules = rules;
+  syncConductSemesterStates(db);
   saveDatabase();
   res.json({ success: true, conductSettings: db.conductSettings });
 });
+app.get("/api/conduct/summary", authMiddleware, (req, res) => {
+  const user = req.user;
+  const { studentId, schoolYear, semester } = req.query;
+  const activeSem = getActiveSemester(db.config);
+  const targetYear = schoolYear ? String(schoolYear) : activeSem.schoolYear;
+  const requestedSem = semester ? String(semester) : activeSem.semester;
+  const targetStudents = user.role === "student" ? db.students.filter((s) => s.id === user.studentId) : studentId ? db.students.filter((s) => s.id === String(studentId)) : db.students.filter((s) => s.status === "active");
+  const summaries = targetStudents.map((stu) => {
+    if (requestedSem === "ALL") {
+      return {
+        studentId: stu.id,
+        schoolYear: targetYear,
+        hk1: calculateSemesterConductSummary(stu.id, targetYear, "HK1", db.incidents, db.conductSettings, db.config),
+        hk2: calculateSemesterConductSummary(stu.id, targetYear, "HK2", db.incidents, db.conductSettings, db.config)
+      };
+    }
+    const sem = requestedSem === "HK2" ? "HK2" : "HK1";
+    return {
+      studentId: stu.id,
+      schoolYear: targetYear,
+      semester: sem,
+      summary: calculateSemesterConductSummary(stu.id, targetYear, sem, db.incidents, db.conductSettings, db.config)
+    };
+  });
+  res.json({
+    activeSemester: activeSem,
+    schoolYear: targetYear,
+    semester: requestedSem,
+    summaries
+  });
+});
 app.get("/api/conduct/incidents", authMiddleware, (req, res) => {
   const user = req.user;
-  const { studentId, month } = req.query;
-  let records = db.incidents;
+  const { studentId, month, schoolYear, semester } = req.query;
+  let records = db.incidents.map((r) => {
+    const tag = getIncidentSemester(r, db.config);
+    return {
+      ...r,
+      schoolYear: r.schoolYear || tag.schoolYear,
+      semester: r.semester || tag.semester
+    };
+  });
   if (user.role === "student") {
     records = records.filter((r) => r.studentId === user.studentId);
   } else if (studentId) {
@@ -905,30 +1294,52 @@ app.get("/api/conduct/incidents", authMiddleware, (req, res) => {
   if (month) {
     records = records.filter((r) => r.date.startsWith(String(month)));
   }
+  if (schoolYear) {
+    records = records.filter((r) => r.schoolYear === String(schoolYear));
+  }
+  if (semester && (semester === "HK1" || semester === "HK2")) {
+    records = records.filter((r) => r.semester === semester);
+  }
   res.json(records);
 });
 app.post("/api/conduct/incidents", authMiddleware, teacherOnly, (req, res) => {
-  const { studentId, date, ruleId, ruleName, category, points, content, note } = req.body;
+  const { studentId, date, schoolYear, semester, ruleId, ruleName, category, points, content, note } = req.body;
   if (!studentId || !date || !ruleName || !content || points === void 0) {
     res.status(400).json({ error: "Vui l\xF2ng nh\u1EADp \u0111\u1EA7y \u0111\u1EE7 th\xF4ng tin s\u1EF1 vi\u1EC7c" });
     return;
   }
+  const parsedPoints = Math.abs(Number(points));
+  if (isNaN(parsedPoints)) {
+    res.status(400).json({ error: "S\u1ED1 \u0111i\u1EC3m kh\xF4ng h\u1EE3p l\u1EC7" });
+    return;
+  }
+  const resolved = resolveDateToSemester(String(date), db.config);
+  const assignedYear = resolved.isWithinConfiguredRange ? resolved.schoolYear : schoolYear ? String(schoolYear) : resolved.schoolYear;
+  const assignedSemester = resolved.isWithinConfiguredRange ? resolved.semester : semester === "HK1" || semester === "HK2" ? semester : resolved.semester;
   const newIncident = {
     id: `inc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     studentId,
-    date,
+    date: String(date),
+    schoolYear: assignedYear,
+    semester: assignedSemester,
     ruleId: ruleId || void 0,
     ruleName,
     category: category === "reward" ? "reward" : "violation",
-    points: Math.abs(Number(points)),
+    points: parsedPoints,
     content,
     note: note || "",
     recordedBy: db.config.teacherName,
     createdAt: (/* @__PURE__ */ new Date()).toISOString()
   };
   db.incidents.push(newIncident);
+  syncConductSemesterStates(db);
   saveDatabase();
-  res.json({ success: true, incident: newIncident });
+  res.json({
+    success: true,
+    incident: newIncident,
+    isWithinConfiguredRange: resolved.isWithinConfiguredRange,
+    ...resolved.isWithinConfiguredRange ? {} : { warning: "Ng\xE0y x\u1EA3y ra s\u1EF1 vi\u1EC7c n\u1EB1m ngo\xE0i kho\u1EA3ng th\u1EDDi gian h\u1ECDc k\u1EF3 \u0111\xE3 c\u1EA5u h\xECnh." }
+  });
 });
 app.put("/api/conduct/incidents/:id", authMiddleware, teacherOnly, (req, res) => {
   const { id } = req.params;
@@ -937,16 +1348,42 @@ app.put("/api/conduct/incidents/:id", authMiddleware, teacherOnly, (req, res) =>
     res.status(404).json({ error: "Kh\xF4ng t\xECm th\u1EA5y s\u1EF1 vi\u1EC7c" });
     return;
   }
-  const { date, ruleId, ruleName, category, points, content, note } = req.body;
-  if (date) incident.date = date;
+  const previousTag = getIncidentSemester(incident, db.config);
+  const { date, schoolYear, semester, ruleId, ruleName, category, points, content, note } = req.body;
+  if (date) {
+    incident.date = String(date);
+    const resolved = resolveDateToSemester(incident.date, db.config);
+    if (resolved.isWithinConfiguredRange) {
+      incident.schoolYear = resolved.schoolYear;
+      incident.semester = resolved.semester;
+    } else {
+      incident.schoolYear = schoolYear ? String(schoolYear) : resolved.schoolYear;
+      incident.semester = semester === "HK1" || semester === "HK2" ? semester : resolved.semester;
+    }
+  } else {
+    if (schoolYear) incident.schoolYear = String(schoolYear);
+    if (semester === "HK1" || semester === "HK2") incident.semester = semester;
+  }
   if (ruleId !== void 0) incident.ruleId = ruleId;
   if (ruleName) incident.ruleName = ruleName;
-  if (category) incident.category = category;
-  if (points !== void 0) incident.points = Math.abs(Number(points));
+  if (category) incident.category = category === "reward" ? "reward" : "violation";
+  if (points !== void 0) {
+    const parsedPoints = Math.abs(Number(points));
+    if (!isNaN(parsedPoints)) incident.points = parsedPoints;
+  }
   if (content) incident.content = content;
   if (note !== void 0) incident.note = note;
+  syncConductSemesterStates(db);
   saveDatabase();
-  res.json({ success: true, incident });
+  const updatedTag = getIncidentSemester(incident, db.config);
+  const resolvedCheck = resolveDateToSemester(incident.date, db.config);
+  res.json({
+    success: true,
+    incident,
+    isWithinConfiguredRange: resolvedCheck.isWithinConfiguredRange,
+    previousSemester: previousTag,
+    currentSemester: updatedTag
+  });
 });
 app.delete("/api/conduct/incidents/:id", authMiddleware, teacherOnly, (req, res) => {
   const { id } = req.params;
@@ -956,6 +1393,7 @@ app.delete("/api/conduct/incidents/:id", authMiddleware, teacherOnly, (req, res)
     return;
   }
   db.incidents.splice(idx, 1);
+  syncConductSemesterStates(db);
   saveDatabase();
   res.json({ success: true, message: "\u0110\xE3 x\xF3a ghi nh\u1EADn s\u1EF1 vi\u1EC7c" });
 });
@@ -1116,7 +1554,8 @@ app.get("/api/backup", authMiddleware, teacherOnly, (req, res) => {
     incidents: db.incidents,
     bulletin: db.bulletin,
     seating: db.seating,
-    honorBoards: db.honorBoards
+    honorBoards: db.honorBoards,
+    conductSemesterStates: db.conductSemesterStates
   };
   res.setHeader("Content-Disposition", `attachment; filename="Sao_Luu_Lop_${db.config.className}_${Date.now()}.json"`);
   res.json(backup);
@@ -1138,7 +1577,8 @@ app.post("/api/restore", authMiddleware, teacherOnly, (req, res) => {
       ...defaultDb.config,
       ...backupData.config,
       // Retain existing password hash if backup has none
-      adminPasswordHash: backupData.config?.adminPasswordHash || db.config.adminPasswordHash
+      adminPasswordHash: backupData.config?.adminPasswordHash || db.config.adminPasswordHash,
+      semesterConfigs: getEffectiveSemesterConfigs(backupData.config)
     },
     seating: {
       ...defaultDb.seating,
@@ -1146,6 +1586,7 @@ app.post("/api/restore", authMiddleware, teacherOnly, (req, res) => {
       slots: backupData.seating?.slots || generateDefaultSeatingSlots()
     }
   };
+  syncConductSemesterStates(db);
   saveDatabase();
   res.json({
     success: true,

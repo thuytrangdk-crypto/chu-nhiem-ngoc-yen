@@ -16,7 +16,18 @@ import {
   HonorBoard,
   DatabaseBackup,
   UserSession,
+  ConductSemesterState,
+  SemesterId,
 } from '../src/types';
+import {
+  getEffectiveSemesterConfigs,
+  validateSemesterConfigs,
+  resolveDateToSemester,
+  getActiveSemester,
+  getIncidentSemester,
+  calculateSemesterConductSummary,
+  getConductSemesterKey,
+} from '../src/utils/conduct';
 
 dotenv.config();
 
@@ -83,6 +94,7 @@ interface DatabaseStructure {
   bulletin: BulletinPost[];
   seating: SeatingPlan;
   honorBoards: Record<string, HonorBoard>;
+  conductSemesterStates?: Record<string, ConductSemesterState>;
   _sessions?: Record<string, UserSession>;
   _attempts?: Record<string, { count: number; lockedUntil: number }>;
   _snapshots?: Record<string, unknown>;
@@ -103,6 +115,7 @@ const defaultDb: DatabaseStructure = {
     schoolYear: '2026-2027',
     adminPasswordHash: INITIAL_TEACHER_HASH,
     updatedAt: new Date().toISOString(),
+    semesterConfigs: getEffectiveSemesterConfigs({ schoolYear: '2026-2027' }),
     attentionThreshold: {
       absenceDays: 2,
       violationsCount: 2,
@@ -139,8 +152,68 @@ const defaultDb: DatabaseStructure = {
     updatedAt: new Date().toISOString(),
   },
   honorBoards: {},
+  conductSemesterStates: {},
   scoreBackups: {},
 };
+
+function syncConductSemesterStates(database: DatabaseStructure) {
+  const states: Record<string, ConductSemesterState> = { ...(database.conductSemesterStates || {}) };
+  const now = new Date().toISOString();
+  const initialScore = database.conductSettings?.initialScore ?? 200;
+  const active = getActiveSemester(database.config);
+
+  const pairs = new Map<string, { schoolYear: string; semester: SemesterId }>();
+  pairs.set(getConductSemesterKey(active.schoolYear, active.semester), {
+    schoolYear: active.schoolYear,
+    semester: active.semester,
+  });
+
+  // Also ensure both HK1 and HK2 of current schoolYear and any existing state/incident keys are synced
+  const currentYear = database.config?.schoolYear || active.schoolYear;
+  pairs.set(getConductSemesterKey(currentYear, 'HK1'), { schoolYear: currentYear, semester: 'HK1' });
+  pairs.set(getConductSemesterKey(currentYear, 'HK2'), { schoolYear: currentYear, semester: 'HK2' });
+
+  for (const existingState of Object.values(states)) {
+    if (existingState?.schoolYear && (existingState.semester === 'HK1' || existingState.semester === 'HK2')) {
+      pairs.set(getConductSemesterKey(existingState.schoolYear, existingState.semester), {
+        schoolYear: existingState.schoolYear,
+        semester: existingState.semester,
+      });
+    }
+  }
+
+  for (const inc of database.incidents) {
+    const tag = getIncidentSemester(inc, database.config);
+    pairs.set(getConductSemesterKey(tag.schoolYear, tag.semester), tag);
+  }
+
+  const activeStudents = database.students.filter(s => s.status === 'active');
+
+  for (const [key, { schoolYear, semester }] of pairs.entries()) {
+    const prev = states[key];
+    const studentScores: ConductSemesterState['studentScores'] = {};
+    for (const stu of activeStudents) {
+      studentScores[stu.id] = calculateSemesterConductSummary(
+        stu.id,
+        schoolYear,
+        semester,
+        database.incidents,
+        database.conductSettings,
+        database.config
+      );
+    }
+    states[key] = {
+      schoolYear,
+      semester,
+      initialScore,
+      initializedAt: prev?.initializedAt || now,
+      updatedAt: now,
+      studentScores,
+    };
+  }
+
+  database.conductSemesterStates = states;
+}
 
 // All requests reload cloud state. Responses wait for a durable, version-checked write.
 let db: DatabaseStructure = structuredClone(defaultDb);
@@ -493,11 +566,37 @@ app.post('/api/auth/reset-student-password', authMiddleware, teacherOnly, (req: 
 app.get('/api/config', (req: Request, res: Response) => {
   // Do NOT return password hash!
   const { adminPasswordHash, ...safeConfig } = db.config;
-  res.json(safeConfig);
+  res.json({
+    ...safeConfig,
+    semesterConfigs: getEffectiveSemesterConfigs(db.config),
+  });
 });
 
 app.post('/api/config', authMiddleware, teacherOnly, (req: Request, res: Response): void => {
-  const { appName, schoolName, className, teacherName, schoolYear, logoUrl, attentionThreshold, autoConductFromAttendance } = req.body;
+  const {
+    appName,
+    schoolName,
+    className,
+    teacherName,
+    schoolYear,
+    logoUrl,
+    semesterConfigs,
+    attentionThreshold,
+    autoConductFromAttendance,
+  } = req.body;
+
+  if (semesterConfigs !== undefined) {
+    if (!semesterConfigs || typeof semesterConfigs !== 'object') {
+      res.status(400).json({ error: 'Cấu hình thời gian học kỳ không hợp lệ' });
+      return;
+    }
+    const validationError = validateSemesterConfigs(semesterConfigs);
+    if (validationError) {
+      res.status(400).json({ error: validationError });
+      return;
+    }
+    db.config.semesterConfigs = semesterConfigs;
+  }
 
   if (appName) db.config.appName = String(appName).trim();
   if (schoolName !== undefined) db.config.schoolName = String(schoolName).trim();
@@ -518,7 +617,9 @@ app.post('/api/config', authMiddleware, teacherOnly, (req: Request, res: Respons
       lateRuleId: autoConductFromAttendance.lateRuleId,
     };
   }
+  db.config.semesterConfigs = getEffectiveSemesterConfigs(db.config);
   db.config.updatedAt = new Date().toISOString();
+  syncConductSemesterStates(db);
   saveDatabase();
 
   const { adminPasswordHash, ...safeConfig } = db.config;
@@ -796,6 +897,7 @@ app.post('/api/students/clean-class', authMiddleware, teacherOnly, (req: Request
   db.scores = [];
   db.incidents = [];
   db.honorBoards = {};
+  db.conductSemesterStates = {};
   db.seating.slots.forEach(s => (s.studentId = null));
   saveDatabase();
 
@@ -857,6 +959,7 @@ app.post('/api/attendance', authMiddleware, teacherOnly, (req: Request, res: Res
     if (autoConduct?.enabled) {
       const student = db.students.find(s => s.id === item.studentId);
       if (student) {
+        const resolvedSem = resolveDateToSemester(date, db.config);
         // Unexcused absence
         if (item.status === 'unexcused' && autoConduct.unexcusedAbsenceRuleId) {
           const rule = db.conductSettings.rules.find(r => r.id === autoConduct.unexcusedAbsenceRuleId);
@@ -868,6 +971,8 @@ app.post('/api/attendance', authMiddleware, teacherOnly, (req: Request, res: Res
                 id: `inc_auto_att_${date}_${item.studentId}`,
                 studentId: item.studentId,
                 date,
+                schoolYear: resolvedSem.schoolYear,
+                semester: resolvedSem.semester,
                 ruleId: rule.id,
                 ruleName: rule.name,
                 category: 'violation',
@@ -888,6 +993,8 @@ app.post('/api/attendance', authMiddleware, teacherOnly, (req: Request, res: Res
                 id: `inc_auto_att_late_${date}_${item.studentId}`,
                 studentId: item.studentId,
                 date,
+                schoolYear: resolvedSem.schoolYear,
+                semester: resolvedSem.semester,
                 ruleId: rule.id,
                 ruleName: rule.name,
                 category: 'violation',
@@ -905,6 +1012,9 @@ app.post('/api/attendance', authMiddleware, teacherOnly, (req: Request, res: Res
   }
 
   db.attendance.push(...newRecords);
+  if (autoConduct?.enabled) {
+    syncConductSemesterStates(db);
+  }
   saveDatabase();
 
   res.json({ success: true, count: newRecords.length, message: `Đã lưu điểm danh ngày ${date} thành công` });
@@ -1090,16 +1200,65 @@ app.post('/api/conduct/rules', authMiddleware, teacherOnly, (req: Request, res: 
   if (thresholdPass !== undefined) db.conductSettings.thresholdPass = Number(thresholdPass);
   if (Array.isArray(rules)) db.conductSettings.rules = rules;
 
+  syncConductSemesterStates(db);
   saveDatabase();
   res.json({ success: true, conductSettings: db.conductSettings });
+});
+
+// Conduct semester summary
+app.get('/api/conduct/summary', authMiddleware, (req: Request, res: Response) => {
+  const user = (req as any).user as UserSession;
+  const { studentId, schoolYear, semester } = req.query;
+
+  const activeSem = getActiveSemester(db.config);
+  const targetYear = schoolYear ? String(schoolYear) : activeSem.schoolYear;
+  const requestedSem = semester ? String(semester) : activeSem.semester;
+
+  const targetStudents = user.role === 'student'
+    ? db.students.filter(s => s.id === user.studentId)
+    : studentId
+      ? db.students.filter(s => s.id === String(studentId))
+      : db.students.filter(s => s.status === 'active');
+
+  const summaries = targetStudents.map(stu => {
+    if (requestedSem === 'ALL') {
+      return {
+        studentId: stu.id,
+        schoolYear: targetYear,
+        hk1: calculateSemesterConductSummary(stu.id, targetYear, 'HK1', db.incidents, db.conductSettings, db.config),
+        hk2: calculateSemesterConductSummary(stu.id, targetYear, 'HK2', db.incidents, db.conductSettings, db.config),
+      };
+    }
+    const sem: SemesterId = requestedSem === 'HK2' ? 'HK2' : 'HK1';
+    return {
+      studentId: stu.id,
+      schoolYear: targetYear,
+      semester: sem,
+      summary: calculateSemesterConductSummary(stu.id, targetYear, sem, db.incidents, db.conductSettings, db.config),
+    };
+  });
+
+  res.json({
+    activeSemester: activeSem,
+    schoolYear: targetYear,
+    semester: requestedSem,
+    summaries,
+  });
 });
 
 // Incident records
 app.get('/api/conduct/incidents', authMiddleware, (req: Request, res: Response) => {
   const user = (req as any).user as UserSession;
-  const { studentId, month } = req.query;
+  const { studentId, month, schoolYear, semester } = req.query;
 
-  let records = db.incidents;
+  let records = db.incidents.map(r => {
+    const tag = getIncidentSemester(r, db.config);
+    return {
+      ...r,
+      schoolYear: r.schoolYear || tag.schoolYear,
+      semester: r.semester || tag.semester,
+    };
+  });
 
   if (user.role === 'student') {
     // ONLY student's own incidents
@@ -1112,25 +1271,49 @@ app.get('/api/conduct/incidents', authMiddleware, (req: Request, res: Response) 
     records = records.filter(r => r.date.startsWith(String(month)));
   }
 
+  if (schoolYear) {
+    records = records.filter(r => r.schoolYear === String(schoolYear));
+  }
+
+  if (semester && (semester === 'HK1' || semester === 'HK2')) {
+    records = records.filter(r => r.semester === semester);
+  }
+
   res.json(records);
 });
 
 app.post('/api/conduct/incidents', authMiddleware, teacherOnly, (req: Request, res: Response): void => {
-  const { studentId, date, ruleId, ruleName, category, points, content, note } = req.body;
+  const { studentId, date, schoolYear, semester, ruleId, ruleName, category, points, content, note } = req.body;
 
   if (!studentId || !date || !ruleName || !content || points === undefined) {
     res.status(400).json({ error: 'Vui lòng nhập đầy đủ thông tin sự việc' });
     return;
   }
 
+  const parsedPoints = Math.abs(Number(points));
+  if (isNaN(parsedPoints)) {
+    res.status(400).json({ error: 'Số điểm không hợp lệ' });
+    return;
+  }
+
+  const resolved = resolveDateToSemester(String(date), db.config);
+  const assignedYear = resolved.isWithinConfiguredRange
+    ? resolved.schoolYear
+    : (schoolYear ? String(schoolYear) : resolved.schoolYear);
+  const assignedSemester: SemesterId = resolved.isWithinConfiguredRange
+    ? resolved.semester
+    : (semester === 'HK1' || semester === 'HK2' ? semester : resolved.semester);
+
   const newIncident: ConductIncident = {
     id: `inc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     studentId,
-    date,
+    date: String(date),
+    schoolYear: assignedYear,
+    semester: assignedSemester,
     ruleId: ruleId || undefined,
     ruleName,
     category: category === 'reward' ? 'reward' : 'violation',
-    points: Math.abs(Number(points)),
+    points: parsedPoints,
     content,
     note: note || '',
     recordedBy: db.config.teacherName,
@@ -1138,9 +1321,17 @@ app.post('/api/conduct/incidents', authMiddleware, teacherOnly, (req: Request, r
   };
 
   db.incidents.push(newIncident);
+  syncConductSemesterStates(db);
   saveDatabase();
 
-  res.json({ success: true, incident: newIncident });
+  res.json({
+    success: true,
+    incident: newIncident,
+    isWithinConfiguredRange: resolved.isWithinConfiguredRange,
+    ...(resolved.isWithinConfiguredRange
+      ? {}
+      : { warning: 'Ngày xảy ra sự việc nằm ngoài khoảng thời gian học kỳ đã cấu hình.' }),
+  });
 });
 
 app.put('/api/conduct/incidents/:id', authMiddleware, teacherOnly, (req: Request, res: Response): void => {
@@ -1151,17 +1342,47 @@ app.put('/api/conduct/incidents/:id', authMiddleware, teacherOnly, (req: Request
     return;
   }
 
-  const { date, ruleId, ruleName, category, points, content, note } = req.body;
-  if (date) incident.date = date;
+  const previousTag = getIncidentSemester(incident, db.config);
+  const { date, schoolYear, semester, ruleId, ruleName, category, points, content, note } = req.body;
+
+  if (date) {
+    incident.date = String(date);
+    const resolved = resolveDateToSemester(incident.date, db.config);
+    if (resolved.isWithinConfiguredRange) {
+      incident.schoolYear = resolved.schoolYear;
+      incident.semester = resolved.semester;
+    } else {
+      incident.schoolYear = schoolYear ? String(schoolYear) : resolved.schoolYear;
+      incident.semester = semester === 'HK1' || semester === 'HK2' ? semester : resolved.semester;
+    }
+  } else {
+    if (schoolYear) incident.schoolYear = String(schoolYear);
+    if (semester === 'HK1' || semester === 'HK2') incident.semester = semester;
+  }
+
   if (ruleId !== undefined) incident.ruleId = ruleId;
   if (ruleName) incident.ruleName = ruleName;
-  if (category) incident.category = category;
-  if (points !== undefined) incident.points = Math.abs(Number(points));
+  if (category) incident.category = category === 'reward' ? 'reward' : 'violation';
+  if (points !== undefined) {
+    const parsedPoints = Math.abs(Number(points));
+    if (!isNaN(parsedPoints)) incident.points = parsedPoints;
+  }
   if (content) incident.content = content;
   if (note !== undefined) incident.note = note;
 
+  syncConductSemesterStates(db);
   saveDatabase();
-  res.json({ success: true, incident });
+
+  const updatedTag = getIncidentSemester(incident, db.config);
+  const resolvedCheck = resolveDateToSemester(incident.date, db.config);
+
+  res.json({
+    success: true,
+    incident,
+    isWithinConfiguredRange: resolvedCheck.isWithinConfiguredRange,
+    previousSemester: previousTag,
+    currentSemester: updatedTag,
+  });
 });
 
 app.delete('/api/conduct/incidents/:id', authMiddleware, teacherOnly, (req: Request, res: Response): void => {
@@ -1173,6 +1394,7 @@ app.delete('/api/conduct/incidents/:id', authMiddleware, teacherOnly, (req: Requ
   }
 
   db.incidents.splice(idx, 1);
+  syncConductSemesterStates(db);
   saveDatabase();
   res.json({ success: true, message: 'Đã xóa ghi nhận sự việc' });
 });
@@ -1373,6 +1595,7 @@ app.get('/api/backup', authMiddleware, teacherOnly, (req: Request, res: Response
     bulletin: db.bulletin,
     seating: db.seating,
     honorBoards: db.honorBoards,
+    conductSemesterStates: db.conductSemesterStates,
   };
 
   res.setHeader('Content-Disposition', `attachment; filename="Sao_Luu_Lop_${db.config.className}_${Date.now()}.json"`);
@@ -1401,6 +1624,7 @@ app.post('/api/restore', authMiddleware, teacherOnly, (req: Request, res: Respon
       ...backupData.config,
       // Retain existing password hash if backup has none
       adminPasswordHash: backupData.config?.adminPasswordHash || db.config.adminPasswordHash,
+      semesterConfigs: getEffectiveSemesterConfigs(backupData.config),
     },
     seating: {
       ...defaultDb.seating,
@@ -1409,6 +1633,7 @@ app.post('/api/restore', authMiddleware, teacherOnly, (req: Request, res: Respon
     },
   };
 
+  syncConductSemesterStates(db);
   saveDatabase();
   res.json({
     success: true,

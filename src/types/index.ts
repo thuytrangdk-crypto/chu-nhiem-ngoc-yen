@@ -10,6 +10,19 @@ export interface UserSession {
   mustChangePassword?: boolean;
 }
 
+export type SemesterId = 'HK1' | 'HK2';
+
+export interface SemesterDateRange {
+  startDate: string; // "YYYY-MM-DD"
+  endDate: string;   // "YYYY-MM-DD"
+}
+
+export interface SchoolYearSemesters {
+  schoolYear: string; // e.g. "2026-2027"
+  hk1: SemesterDateRange;
+  hk2: SemesterDateRange;
+}
+
 export interface ClassConfig {
   id: string; // Stable class ID, e.g. "class_main"
   appName: string; // e.g. "Trợ lý chủ nhiệm"
@@ -20,6 +33,8 @@ export interface ClassConfig {
   logoUrl?: string;
   adminPasswordHash?: string;
   updatedAt: string;
+  // Configured semester start/end dates per school year
+  semesterConfigs?: Record<string, SchoolYearSemesters>;
   // Threshold for "Students needing attention"
   attentionThreshold: {
     absenceDays: number; // e.g. 2 days
@@ -107,6 +122,8 @@ export interface ConductIncident {
   id: string;
   studentId: string;
   date: string; // "YYYY-MM-DD"
+  schoolYear?: string; // e.g. "2026-2027"
+  semester?: SemesterId; // "HK1" | "HK2"
   ruleId?: string;
   ruleName: string;
   category: 'violation' | 'reward';
@@ -115,6 +132,25 @@ export interface ConductIncident {
   note?: string;
   recordedBy: string; // Teacher name
   createdAt: string;
+}
+
+export interface ConductSemesterStudentSummary {
+  initialScore: number;
+  totalReward: number;
+  totalViolation: number;
+  finalScore: number;
+  rank: 'Tốt' | 'Khá' | 'Đạt' | 'Chưa đạt';
+  violationCount: number;
+  rewardCount: number;
+}
+
+export interface ConductSemesterState {
+  schoolYear: string;
+  semester: SemesterId;
+  initialScore: number;
+  initializedAt: string;
+  updatedAt: string;
+  studentScores: Record<string, ConductSemesterStudentSummary>;
 }
 
 export interface BulletinPost {
@@ -187,4 +223,5 @@ export interface DatabaseBackup {
   bulletin: BulletinPost[];
   seating: SeatingPlan;
   honorBoards: Record<string, HonorBoard>;
+  conductSemesterStates?: Record<string, ConductSemesterState>;
 }

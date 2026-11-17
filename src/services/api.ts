@@ -268,9 +268,39 @@ class ApiService {
     });
   }
 
-  async getIncidents(params?: { studentId?: string; month?: string }): Promise<ConductIncident[]> {
-    const q = new URLSearchParams(params as any).toString();
+  async getIncidents(params?: {
+    studentId?: string;
+    month?: string;
+    schoolYear?: string;
+    semester?: string;
+  }): Promise<ConductIncident[]> {
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null && v !== '' && v !== 'ALL') {
+          cleanParams[k] = String(v);
+        }
+      }
+    }
+    const q = new URLSearchParams(cleanParams).toString();
     return this.request(`/api/conduct/incidents${q ? `?${q}` : ''}`);
+  }
+
+  async getConductSummary(params?: {
+    studentId?: string;
+    schoolYear?: string;
+    semester?: string;
+  }) {
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null && v !== '') {
+          cleanParams[k] = String(v);
+        }
+      }
+    }
+    const q = new URLSearchParams(cleanParams).toString();
+    return this.request(`/api/conduct/summary${q ? `?${q}` : ''}`);
   }
 
   async createIncident(data: Partial<ConductIncident>) {

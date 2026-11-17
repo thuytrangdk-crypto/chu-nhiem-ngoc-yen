@@ -1,5 +1,10 @@
 import * as XLSX from 'xlsx';
-import { Student, Subject, MonthlyScoreRecord, ConductIncident, ConductSettings, ClassConfig } from '../types';
+import { Student, Subject, MonthlyScoreRecord, ConductIncident, ConductSettings, ClassConfig, SemesterId } from '../types';
+import {
+  calculateSemesterConductSummary,
+  formatSemesterLabel,
+  getIncidentSemester,
+} from '../utils/conduct';
 
 // Helper to format date as DD/MM/YYYY
 export function formatDateVN(dateStr?: string): string {
@@ -390,29 +395,47 @@ export function exportMonthlyScoresExcel(
   XLSX.writeFile(wb, `Bang_Diem_Thang_${monthStr}_${config.className}.xlsx`);
 }
 
-// 7. Export Single Student Violations Report (Item 9: 2 sheets)
+// 7. Export Single Student Conduct & Violations Report
 export function exportStudentViolationsExcel(
   student: Student,
   incidents: ConductIncident[],
   periodLabel: string,
-  config: ClassConfig
+  config: ClassConfig,
+  options?: {
+    schoolYear?: string;
+    semester?: SemesterId | 'ALL';
+    settings?: ConductSettings | null;
+  }
 ) {
-  // Only violations
-  const violations = incidents.filter(inc => inc.category === 'violation');
+  const targetYear = options?.schoolYear || config.schoolYear;
+  const targetSem = options?.semester || 'ALL';
+
+  const scopedIncidents = incidents.filter(inc => {
+    const tag = getIncidentSemester(inc, config);
+    if (options?.schoolYear && tag.schoolYear !== targetYear) return false;
+    if (options?.semester && options.semester !== 'ALL' && tag.semester !== options.semester) return false;
+    return true;
+  });
+
+  // Only violations for Sheet 1 (kept compatible with existing report title) + full semester info
+  const violations = scopedIncidents.filter(inc => inc.category === 'violation');
 
   // Sheet 1: Chi tiết vi phạm
   const sheet1Data: any[][] = [
     [config.schoolName || 'TRƯỜNG HỌC'],
-    [`LỚP: ${config.className} · GVCN: ${config.teacherName} · NĂM HỌC: ${config.schoolYear}`],
+    [`LỚP: ${config.className} · GVCN: ${config.teacherName} · NĂM HỌC: ${targetYear}`],
     [`BÁO CÁO VI PHẠM KỶ LUẬT · KỲ BÁO CÁO: ${periodLabel}`],
     [`HỌC SINH: ${student.fullName.toUpperCase()} · MÃ HỒ SƠ: ${student.code} · NGÀY SINH: ${formatDateVN(student.birthDate)}`],
     [],
-    ['STT', 'Ngày xảy ra', 'Tên lỗi / Quy tắc', 'Nội dung chi tiết', 'Điểm trừ', 'Ghi chú', 'Người ghi nhận'],
+    ['STT', 'Năm học', 'Học kỳ', 'Ngày xảy ra', 'Tên lỗi / Quy tắc', 'Nội dung chi tiết', 'Điểm trừ', 'Ghi chú', 'Người ghi nhận'],
   ];
 
   violations.forEach((v, idx) => {
+    const tag = getIncidentSemester(v, config);
     sheet1Data.push([
       idx + 1,
+      tag.schoolYear,
+      formatSemesterLabel(tag.semester),
       formatDateVN(v.date),
       v.ruleName,
       v.content,
@@ -423,42 +446,65 @@ export function exportStudentViolationsExcel(
   });
 
   if (violations.length === 0) {
-    sheet1Data.push(['-', 'Không có vi phạm trong kỳ báo cáo', '', '', '0', '', '']);
+    sheet1Data.push(['-', targetYear, formatSemesterLabel(targetSem), 'Không có vi phạm trong kỳ báo cáo', '', '', '0', '', '']);
   }
 
-  // Sheet 2: Tổng hợp theo lỗi
-  // Group by ruleName
-  const summaryMap = new Map<string, { count: number; totalPoints: number }>();
+  // Sheet 2: Tổng hợp theo lỗi & điểm thi đua từng học kỳ
+  const summaryMap = new Map<string, { semesterLabel: string; count: number; totalPoints: number }>();
   let totalAllPoints = 0;
   let totalAllCount = 0;
 
   violations.forEach(v => {
-    const cur = summaryMap.get(v.ruleName) || { count: 0, totalPoints: 0 };
+    const tag = getIncidentSemester(v, config);
+    const semLabel = formatSemesterLabel(tag.semester);
+    const mapKey = `${tag.semester}__${v.ruleName}`;
+    const cur = summaryMap.get(mapKey) || { semesterLabel: semLabel, count: 0, totalPoints: 0 };
     cur.count += 1;
     cur.totalPoints += Math.abs(v.points);
-    summaryMap.set(v.ruleName, cur);
+    summaryMap.set(mapKey, cur);
     totalAllCount += 1;
     totalAllPoints += Math.abs(v.points);
   });
 
   const sheet2Data: any[][] = [
     [config.schoolName || 'TRƯỜNG HỌC'],
-    [`LỚP: ${config.className} · GVCN: ${config.teacherName}`],
-    [`TỔNG HỢP VI PHẠM THEO LỖI: ${student.fullName.toUpperCase()} · ${periodLabel}`],
+    [`LỚP: ${config.className} · GVCN: ${config.teacherName} · NĂM HỌC: ${targetYear}`],
+    [`TỔNG HỢP THI ĐUA & VI PHẠM: ${student.fullName.toUpperCase()} · ${periodLabel}`],
     [],
-    ['STT', 'Tên lỗi vi phạm', 'Số lượt vi phạm', 'Tổng điểm trừ'],
   ];
+
+  if (options?.settings) {
+    sheet2Data.push(['Học kỳ', 'Điểm khởi đầu', 'Tổng điểm thưởng', 'Tổng điểm trừ', 'Điểm thi đua còn lại', 'Xếp loại rèn luyện']);
+    const semestersToShow: SemesterId[] = targetSem === 'ALL' ? ['HK1', 'HK2'] : [targetSem];
+    semestersToShow.forEach(sem => {
+      const s = calculateSemesterConductSummary(student.id, targetYear, sem, incidents, options.settings, config);
+      sheet2Data.push([
+        formatSemesterLabel(sem),
+        s.initialScore,
+        `+${s.totalReward}`,
+        `-${s.totalViolation}`,
+        s.finalScore,
+        s.rank,
+      ]);
+    });
+    sheet2Data.push([]);
+  }
+
+  sheet2Data.push(['STT', 'Học kỳ', 'Tên lỗi vi phạm', 'Số lượt vi phạm', 'Tổng điểm trừ']);
 
   let sumIdx = 1;
   summaryMap.forEach((val, key) => {
-    sheet2Data.push([sumIdx++, key, val.count, `-${val.totalPoints}`]);
+    const ruleName = key.split('__').slice(1).join('__');
+    sheet2Data.push([sumIdx++, val.semesterLabel, ruleName, val.count, `-${val.totalPoints}`]);
   });
 
-  sheet2Data.push(['', 'TỔNG CỘNG', totalAllCount, `-${totalAllPoints}`]);
+  sheet2Data.push(['', '', 'TỔNG CỘNG VI PHẠM', totalAllCount, `-${totalAllPoints}`]);
 
   const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
   ws1['!cols'] = [
     { wch: 6 },
+    { wch: 12 },
+    { wch: 12 },
     { wch: 14 },
     { wch: 28 },
     { wch: 38 },
@@ -469,88 +515,206 @@ export function exportStudentViolationsExcel(
 
   const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
   ws2['!cols'] = [
-    { wch: 6 },
-    { wch: 32 },
-    { wch: 18 },
+    { wch: 14 },
     { wch: 16 },
+    { wch: 30 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 },
   ];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws1, 'Chi tiết vi phạm');
-  XLSX.utils.book_append_sheet(wb, ws2, 'Tổng hợp theo lỗi');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Tổng hợp theo kỳ');
 
   const cleanPeriod = periodLabel.replace(/[/\\?%*:|"<>]/g, '_');
   XLSX.writeFile(wb, `Vi_Pham_${student.code}_${cleanPeriod}.xlsx`);
 }
 
-// 8. Export Whole Class Conduct Report
+// 8. Export Whole Class Conduct Report (HK1, HK2, or ALL - separate columns per semester)
 export function exportClassConductExcel(
   students: Student[],
   incidents: ConductIncident[],
   settings: ConductSettings,
-  periodLabel: string,
+  schoolYear: string,
+  semesterScope: SemesterId | 'ALL',
   config: ClassConfig
 ) {
+  const activeStudents = students.filter(s => s.status === 'active');
+  const periodLabel = formatSemesterLabel(semesterScope);
+
+  const studentById = new Map<string, Student>();
+  activeStudents.forEach(s => studentById.set(s.id, s));
+
   const wsData: any[][] = [
     [config.schoolName || 'TRƯỜNG HỌC'],
-    [`BÁO CÁO THI ĐUA NỀ NẾP LỚP: ${config.className} · KỲ: ${periodLabel}`],
-    [`GIÁO VIÊN CHỦ NHIỆM: ${config.teacherName} · NĂM HỌC: ${config.schoolYear}`],
+    [`BÁO CÁO THI ĐUA NỀ NẾP LỚP: ${config.className} · KỲ: ${periodLabel} · NĂM HỌC: ${schoolYear}`],
+    [`GIÁO VIÊN CHỦ NHIỆM: ${config.teacherName}`],
     [],
-    ['STT', 'Mã hồ sơ', 'Họ và tên', 'Điểm khởi đầu', 'Tổng điểm cộng', 'Tổng điểm trừ', 'Điểm thi đua', 'Xếp loại', 'Số lần vi phạm', 'Số lần khen thưởng'],
   ];
 
-  students.forEach((s, idx) => {
-    const studentIncidents = incidents.filter(inc => inc.studentId === s.id);
-    let totalAdd = 0;
-    let totalSub = 0;
-    let violationCount = 0;
-    let rewardCount = 0;
-
-    studentIncidents.forEach(inc => {
-      if (inc.category === 'reward') {
-        totalAdd += inc.points;
-        rewardCount++;
-      } else {
-        totalSub += Math.abs(inc.points);
-        violationCount++;
-      }
-    });
-
-    const finalScore = settings.initialScore + totalAdd - totalSub;
-    let rank = 'Chưa đạt';
-    if (finalScore >= settings.thresholdGood) rank = 'Tốt';
-    else if (finalScore >= settings.thresholdFair) rank = 'Khá';
-    else if (finalScore >= settings.thresholdPass) rank = 'Đạt';
-
+  if (semesterScope === 'ALL') {
     wsData.push([
+      'STT',
+      'Mã hồ sơ',
+      'Họ và tên',
+      'Điểm đầu kỳ HK1',
+      'Tổng thưởng HK1',
+      'Tổng trừ HK1',
+      'Điểm thi đua HK1',
+      'Hạnh kiểm HK1',
+      'Điểm đầu kỳ HK2',
+      'Tổng thưởng HK2',
+      'Tổng trừ HK2',
+      'Điểm thi đua HK2',
+      'Hạnh kiểm HK2',
+    ]);
+
+    activeStudents.forEach((s, idx) => {
+      const hk1 = calculateSemesterConductSummary(s.id, schoolYear, 'HK1', incidents, settings, config);
+      const hk2 = calculateSemesterConductSummary(s.id, schoolYear, 'HK2', incidents, settings, config);
+
+      wsData.push([
+        idx + 1,
+        s.code,
+        s.fullName,
+        hk1.initialScore,
+        `+${hk1.totalReward}`,
+        `-${hk1.totalViolation}`,
+        hk1.finalScore,
+        hk1.rank,
+        hk2.initialScore,
+        `+${hk2.totalReward}`,
+        `-${hk2.totalViolation}`,
+        hk2.finalScore,
+        hk2.rank,
+      ]);
+    });
+  } else {
+    const semTag = semesterScope === 'HK2' ? 'HK2' : 'HK1';
+    wsData.push([
+      'STT',
+      'Mã hồ sơ',
+      'Họ và tên',
+      `Điểm khởi đầu (${semTag})`,
+      'Tổng điểm thưởng',
+      'Tổng điểm trừ',
+      `Điểm thi đua (${semTag})`,
+      `Hạnh kiểm (${semTag})`,
+      'Số lần vi phạm',
+      'Số lần khen thưởng',
+    ]);
+
+    activeStudents.forEach((s, idx) => {
+      const summary = calculateSemesterConductSummary(s.id, schoolYear, semTag, incidents, settings, config);
+
+      wsData.push([
+        idx + 1,
+        s.code,
+        s.fullName,
+        summary.initialScore,
+        `+${summary.totalReward}`,
+        `-${summary.totalViolation}`,
+        summary.finalScore,
+        summary.rank,
+        summary.violationCount,
+        summary.rewardCount,
+      ]);
+    });
+  }
+
+  // Sheet 2: Chi tiết sự việc trong phạm vi báo cáo
+  const scopedIncidents = incidents
+    .filter(inc => {
+      if (!studentById.has(inc.studentId)) return false;
+      const tag = getIncidentSemester(inc, config);
+      if (tag.schoolYear !== schoolYear) return false;
+      if (semesterScope !== 'ALL' && tag.semester !== semesterScope) return false;
+      return true;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const detailData: any[][] = [
+    [config.schoolName || 'TRƯỜNG HỌC'],
+    [`LỊCH SỬ THI ĐUA & KỶ LUẬT · LỚP ${config.className} · ${periodLabel} · NĂM HỌC ${schoolYear}`],
+    [],
+    ['STT', 'Mã hồ sơ', 'Họ và tên', 'Năm học', 'Học kỳ', 'Ngày xảy ra', 'Phân loại', 'Quy tắc', 'Nội dung sự việc', 'Điểm', 'Ghi chú', 'Người ghi nhận'],
+  ];
+
+  scopedIncidents.forEach((inc, idx) => {
+    const stu = studentById.get(inc.studentId);
+    const tag = getIncidentSemester(inc, config);
+    detailData.push([
       idx + 1,
-      s.code,
-      s.fullName,
-      settings.initialScore,
-      `+${totalAdd}`,
-      `-${totalSub}`,
-      finalScore,
-      rank,
-      violationCount,
-      rewardCount,
+      stu?.code || '',
+      stu?.fullName || '',
+      tag.schoolYear,
+      formatSemesterLabel(tag.semester),
+      formatDateVN(inc.date),
+      inc.category === 'reward' ? 'Khen thưởng' : 'Vi phạm',
+      inc.ruleName,
+      inc.content,
+      inc.category === 'reward' ? `+${Math.abs(inc.points)}` : `-${Math.abs(inc.points)}`,
+      inc.note || '',
+      inc.recordedBy || config.teacherName,
     ]);
   });
 
+  if (scopedIncidents.length === 0) {
+    detailData.push(['-', '', 'Không có sự việc nào trong kỳ báo cáo', schoolYear, periodLabel, '', '', '', '', '', '', '']);
+  }
+
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [
+  ws['!cols'] = semesterScope === 'ALL'
+    ? [
+        { wch: 6 },
+        { wch: 12 },
+        { wch: 26 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 12 },
+        { wch: 16 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 12 },
+        { wch: 16 },
+        { wch: 14 },
+      ]
+    : [
+        { wch: 6 },
+        { wch: 12 },
+        { wch: 26 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 14 },
+        { wch: 16 },
+        { wch: 15 },
+        { wch: 16 },
+        { wch: 18 },
+      ];
+
+  const wsDetail = XLSX.utils.aoa_to_sheet(detailData);
+  wsDetail['!cols'] = [
     { wch: 6 },
+    { wch: 10 },
+    { wch: 24 },
     { wch: 12 },
+    { wch: 12 },
+    { wch: 13 },
+    { wch: 14 },
     { wch: 26 },
-    { wch: 14 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 14 },
-    { wch: 12 },
-    { wch: 16 },
+    { wch: 34 },
+    { wch: 10 },
+    { wch: 22 },
     { wch: 18 },
   ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `Thi đua ${periodLabel}`);
-  XLSX.writeFile(wb, `Bao_Cao_Thi_Dua_${config.className}_${periodLabel}.xlsx`);
+  const cleanSheetName = `Thi đua ${periodLabel}`.slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, cleanSheetName);
+  XLSX.utils.book_append_sheet(wb, wsDetail, 'Chi tiết sự việc');
+
+  const safePeriod = periodLabel.replace(/[/\\?%*:|"<> ]+/g, '_');
+  XLSX.writeFile(wb, `Bao_Cao_Thi_Dua_${config.className}_${schoolYear}_${safePeriod}.xlsx`);
 }
